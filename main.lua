@@ -37,7 +37,6 @@ local CONFIG = {
     maxVisible = 60,
     closestPerName = true,
     showLabels = true,
-    trackerWhitelist = {},
     defaultColor = Color3.fromRGB(255, 255, 255),
     partColors = {
         OreNode = Color3.fromRGB(0, 200, 255),
@@ -64,12 +63,10 @@ local FINAL_SIZE = UDim2.new(0, 800, 0, 456)
 local FINAL_POSITION = UDim2.new(0.5, 0, 0.5, 0)
 
 local espEnabled = false
-local trackerEnabled = false
 local destroyed = false
 local currentPage = "esp"
 local trackedParts = {}
 local activeEntries = {}
-local trackerActiveEntries = {}
 local connections = {}
 local heartbeatAccumulator = 0
 local targetRefreshAccumulator = 999
@@ -279,30 +276,6 @@ local function removeFromIgnore(partName)
         return false
     end
     table.remove(CONFIG.ignore, index)
-    requestTargetRefresh()
-    return true
-end
-
-local function isTrackerWhitelisted(partName)
-    return table.find(CONFIG.trackerWhitelist, partName) ~= nil
-end
-
-local function addToTrackerWhitelist(partName)
-    partName = trim(partName)
-    if partName == "" or isTrackerWhitelisted(partName) then
-        return false
-    end
-    table.insert(CONFIG.trackerWhitelist, partName)
-    requestTargetRefresh()
-    return true
-end
-
-local function removeFromTrackerWhitelist(partName)
-    local index = table.find(CONFIG.trackerWhitelist, partName)
-    if not index then
-        return false
-    end
-    table.remove(CONFIG.trackerWhitelist, index)
     requestTargetRefresh()
     return true
 end
@@ -873,20 +846,16 @@ local blacklistPage = makePage("blacklist")
 local guiPage = makePage("gui")
 local profilesPage = makePage("profiles")
 
-local espSection = makeSection(espPage, "Runtime", 0, 176)
+local espSection = makeSection(espPage, "Runtime", 0, 136)
 local espToggleBtn = makeActionButton(espSection, "ESP OFF", 12, 44, 146, THEME.danger)
 local espStatus = makeStatusLabel(espSection, 172, 52, 300)
-local trackerToggleBtn = makeActionButton(espSection, "Tracker ESP WIP", 12, 86, 146, THEME.panelAlt)
-local trackerConfigBtn = makeActionButton(espSection, "Gear", 172, 86, 64, THEME.panelAlt)
-local trackerStatus = makeStatusLabel(espSection, 248, 94, 260)
-trackerStatus.Text = "WIP. Gear edits the future tracker whitelist only."
-local espInfo = makeStatusLabel(espSection, 12, 134, 450)
+local espInfo = makeStatusLabel(espSection, 12, 92, 450)
 espInfo.Size = UDim2.new(1, -24, 0, 24)
 espInfo.TextWrapped = true
-espInfo.Text = "Normal ESP is active. Tracker ESP is parked as WIP so we can finish it cleanly later."
+espInfo.Text = "Normal ESP uses radius, labels, manual tracer settings, and closest-target rendering."
 espInfo.TextColor3 = THEME.white
 
-local themeSection = makeSection(espPage, "Visual Theme", 192, 134)
+local themeSection = makeSection(espPage, "Visual Theme", 152, 134)
 local lineColorPreview = Instance.new("TextButton")
 lineColorPreview.Size = UDim2.new(0, 64, 0, 64)
 lineColorPreview.Position = UDim2.new(0, 14, 0, 44)
@@ -1041,60 +1010,6 @@ lineColorPromptCancel.ZIndex = 21
 local lineColorPromptStatus = makeStatusLabel(lineColorPrompt, 18, 132, 250)
 lineColorPromptStatus.ZIndex = 21
 
-local trackerPrompt = Instance.new("Frame")
-trackerPrompt.Size = UDim2.new(0, 380, 0, 286)
-trackerPrompt.AnchorPoint = Vector2.new(0.5, 0.5)
-trackerPrompt.Position = UDim2.new(0.5, 0, 0.5, 0)
-trackerPrompt.BackgroundColor3 = THEME.panel
-trackerPrompt.BorderSizePixel = 0
-trackerPrompt.Visible = false
-trackerPrompt.ZIndex = 20
-trackerPrompt.Parent = mainFrame
-addCorner(trackerPrompt, 16)
-addStroke(trackerPrompt, THEME.border, 2)
-local trackerPromptScale = Instance.new("UIScale")
-trackerPromptScale.Name = "PromptScale"
-trackerPromptScale.Scale = 1
-trackerPromptScale.Parent = trackerPrompt
-
-local trackerPromptTitle = makeStatusLabel(trackerPrompt, 18, 14, 250)
-trackerPromptTitle.Text = "Tracker Whitelist"
-trackerPromptTitle.TextColor3 = THEME.white
-trackerPromptTitle.TextSize = 18
-trackerPromptTitle.Font = Enum.Font.GothamBold
-trackerPromptTitle.ZIndex = 21
-
-local trackerPromptHint = makeStatusLabel(trackerPrompt, 18, 42, 330)
-trackerPromptHint.Size = UDim2.new(1, -36, 0, 34)
-trackerPromptHint.TextWrapped = true
-trackerPromptHint.Text = "Whitelist saved for the future Tracker ESP. Rendering stays disabled while this is WIP."
-trackerPromptHint.TextColor3 = THEME.white
-trackerPromptHint.ZIndex = 21
-
-local trackerList = Instance.new("ScrollingFrame")
-trackerList.Size = UDim2.new(1, -36, 0, 126)
-trackerList.Position = UDim2.new(0, 18, 0, 84)
-trackerList.BackgroundColor3 = THEME.panelAlt
-trackerList.BorderSizePixel = 0
-trackerList.ScrollBarThickness = 4
-trackerList.CanvasSize = UDim2.new(0, 0, 0, 0)
-trackerList.ZIndex = 21
-trackerList.Parent = trackerPrompt
-addCorner(trackerList, 12)
-addStroke(trackerList, THEME.border, 2)
-local trackerLayout = Instance.new("UIListLayout")
-trackerLayout.Padding = UDim.new(0, 6)
-trackerLayout.Parent = trackerList
-
-local trackerInput = makeInput(trackerPrompt, "Ore Name", 18, 224, 182)
-trackerInput.ZIndex = 21
-local trackerAddBtn = makeActionButton(trackerPrompt, "Add", 210, 224, 64, THEME.success)
-trackerAddBtn.ZIndex = 21
-local trackerCloseBtn = makeActionButton(trackerPrompt, "Close", 286, 224, 74, THEME.panelAlt)
-trackerCloseBtn.ZIndex = 21
-local trackerPromptStatus = makeStatusLabel(trackerPrompt, 18, 262, 330)
-trackerPromptStatus.ZIndex = 21
-
 local tracerEditPrompt = Instance.new("Frame")
 tracerEditPrompt.Size = UDim2.new(0, 350, 0, 228)
 tracerEditPrompt.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -1142,12 +1057,10 @@ tracerEditStatus.ZIndex = 21
 
 local partColorRows = {}
 local blacklistRows = {}
-local trackerRows = {}
 local selectedTracerName = nil
 local refreshAllAppearances
 local rebuildPartColorList
 local rebuildBlacklistList
-local rebuildTrackerList
 local openTracerEditPrompt
 
 local function refreshUiInputs()
@@ -1202,7 +1115,6 @@ local function applyGuiSettings()
 
     accentName.TextSize = math.max(16, GUI_SETTINGS.bodyTextSize + 4)
     promptTitle.TextSize = math.max(18, GUI_SETTINGS.bodyTextSize + 6)
-    trackerPromptTitle.TextSize = math.max(18, GUI_SETTINGS.bodyTextSize + 6)
     tracerEditTitle.TextSize = math.max(18, GUI_SETTINGS.bodyTextSize + 6)
     applyBtn.BackgroundColor3 = GUI_SETTINGS.accentColor
     guiApplyBtn.BackgroundColor3 = GUI_SETTINGS.accentColor
@@ -1239,14 +1151,7 @@ local function applyConfigPayload(payload)
         CONFIG.partColors = {}
         CONFIG.partThickness = {}
         for partName, tracerData in pairs(payload.partColors) do
-            if partName == "__trackerWhitelist" and typeof(tracerData) == "table" then
-                CONFIG.trackerWhitelist = {}
-                for _, oreName in ipairs(tracerData) do
-                    if typeof(oreName) == "string" and trim(oreName) ~= "" then
-                        table.insert(CONFIG.trackerWhitelist, trim(oreName))
-                    end
-                end
-            elseif typeof(partName) == "string" and typeof(tracerData) == "string" then
+            if typeof(partName) == "string" and typeof(tracerData) == "string" then
                 local loadedColor = colorFromHex(tracerData)
                 if loadedColor then
                     CONFIG.partColors[partName] = loadedColor
@@ -1343,9 +1248,7 @@ local function supabaseRequest(method, path, body, prefer)
 end
 
 local function buildPartColorPayload()
-    local payload = {
-        __trackerWhitelist = CONFIG.trackerWhitelist,
-    }
+    local payload = {}
     for partName, color in pairs(CONFIG.partColors) do
         payload[partName] = {
             color = colorToHex(color),
@@ -1450,14 +1353,7 @@ local function loadConfig()
             CONFIG.partColors = {}
             CONFIG.partThickness = {}
             for partName, tracerData in pairs(config.part_colors) do
-                if partName == "__trackerWhitelist" and typeof(tracerData) == "table" then
-                    CONFIG.trackerWhitelist = {}
-                    for _, oreName in ipairs(tracerData) do
-                        if typeof(oreName) == "string" and trim(oreName) ~= "" then
-                            table.insert(CONFIG.trackerWhitelist, trim(oreName))
-                        end
-                    end
-                elseif typeof(partName) == "string" and typeof(tracerData) == "string" then
+                if typeof(partName) == "string" and typeof(tracerData) == "string" then
                     local loadedColor = colorFromHex(tracerData)
                     if loadedColor then
                         CONFIG.partColors[partName] = loadedColor
@@ -1497,14 +1393,6 @@ local function loadConfig()
     applyGuiSettings()
     rebuildPartColorList()
     rebuildBlacklistList()
-    rebuildTrackerList()
-    if trackerEnabled then
-        trackerEnabled = false
-        trackerToggleBtn.Text = "Tracker ESP WIP"
-        trackerToggleBtn.BackgroundColor3 = THEME.panelAlt
-        table.clear(trackerActiveEntries)
-        setStatus(trackerStatus, "Tracker ESP is WIP. Gear edits whitelist only.", THEME.muted)
-    end
     refreshAllAppearances()
     requestTargetRefresh()
 
@@ -1655,7 +1543,6 @@ end
 
 local function clearActiveEntries()
     table.clear(activeEntries)
-    table.clear(trackerActiveEntries)
 end
 
 local function unregisterPart(part)
@@ -1692,19 +1579,6 @@ local function setEspState(enabled)
         hideAllEntries()
     end
     updateEspPill()
-end
-
-local function setTrackerState(_enabled)
-    trackerEnabled = false
-    trackerToggleBtn.Text = "Tracker ESP WIP"
-    trackerToggleBtn.BackgroundColor3 = THEME.panelAlt
-    setStatus(trackerStatus, "Tracker ESP is WIP. Gear edits whitelist only.", THEME.muted)
-    table.clear(trackerActiveEntries)
-    if espEnabled then
-        requestTargetRefresh()
-    else
-        hideAllEntries()
-    end
 end
 
 local function updateEntry(entry, playerPos)
@@ -1777,11 +1651,11 @@ local function updateEsp()
     local playerPos = hrp.Position
     local updatedEntries = {}
 
-    local function updateList(list, whitelistOnly)
+    local function updateList(list)
         for index = #list, 1, -1 do
             local entry = list[index]
             local part = entry.part
-            if not part or not part.Parent or isIgnored(part.Name) or (whitelistOnly and not isTrackerWhitelisted(part.Name)) then
+            if not part or not part.Parent or isIgnored(part.Name) then
                 table.remove(list, index)
             else
                 local distance = (part.Position - playerPos).Magnitude
@@ -1796,9 +1670,8 @@ local function updateEsp()
     end
 
     if espEnabled then
-        updateList(activeEntries, false)
+        updateList(activeEntries)
     end
-
 end
 
 local function rebuildEspTargets()
@@ -1824,9 +1697,6 @@ local function rebuildEspTargets()
     local selectedLookup = {}
     local nearestByName = {}
     local candidates = {}
-    local trackerSelectedEntries = {}
-    local trackerNearestByName = {}
-    local trackerCandidates = {}
     local staleParts = {}
 
     local function pushCandidate(list, nearestMap, part, entry, distance)
@@ -1873,15 +1743,9 @@ local function rebuildEspTargets()
         for _, candidate in pairs(nearestByName) do
             table.insert(candidates, candidate)
         end
-        for _, candidate in pairs(trackerNearestByName) do
-            table.insert(trackerCandidates, candidate)
-        end
     end
 
     table.sort(candidates, function(a, b)
-        return a.distance < b.distance
-    end)
-    table.sort(trackerCandidates, function(a, b)
         return a.distance < b.distance
     end)
 
@@ -1889,12 +1753,6 @@ local function rebuildEspTargets()
     for index = 1, maxVisible do
         local entry = candidates[index].entry
         selectedEntries[index] = entry
-        selectedLookup[entry] = true
-    end
-    local trackerMaxVisible = math.min(CONFIG.maxVisible or #trackerCandidates, #trackerCandidates)
-    for index = 1, trackerMaxVisible do
-        local entry = trackerCandidates[index].entry
-        trackerSelectedEntries[index] = entry
         selectedLookup[entry] = true
     end
 
@@ -1905,7 +1763,6 @@ local function rebuildEspTargets()
     end
 
     activeEntries = selectedEntries
-    trackerActiveEntries = trackerSelectedEntries
     updateEsp()
 end
 
@@ -1992,59 +1849,11 @@ rebuildBlacklistList = function()
     captureGuiTransparency()
 end
 
-rebuildTrackerList = function()
-    for _, row in ipairs(trackerRows) do
-        row:Destroy()
-    end
-    table.clear(trackerRows)
-    for _, oreName in ipairs(CONFIG.trackerWhitelist) do
-        local row = Instance.new("Frame")
-        row.Size = UDim2.new(1, -10, 0, 30)
-        row.BackgroundColor3 = THEME.panel
-        row.BorderSizePixel = 0
-        row.ZIndex = 21
-        row.Parent = trackerList
-        addCorner(row, 10)
-        addStroke(row, THEME.border, 2)
-        local nameLabel = makeStatusLabel(row, 8, 6, 230)
-        nameLabel.Text = oreName
-        nameLabel.TextColor3 = THEME.white
-        nameLabel.ZIndex = 22
-        local removeBtn = Instance.new("TextButton")
-        removeBtn.Size = UDim2.new(0, 26, 0, 22)
-        removeBtn.Position = UDim2.new(1, -34, 0.5, -11)
-        removeBtn.AutoButtonColor = false
-        removeBtn.BackgroundColor3 = THEME.danger
-        removeBtn.BorderSizePixel = 0
-        removeBtn.Text = "X"
-        removeBtn.TextColor3 = THEME.white
-        removeBtn.TextSize = 12
-        removeBtn.Font = Enum.Font.GothamBold
-        removeBtn.ZIndex = 22
-        removeBtn.Parent = row
-        addCorner(removeBtn, 8)
-        addStroke(removeBtn, Color3.fromRGB(160, 25, 25), 2)
-        enableButtonMotion(removeBtn, 1.04, 0.94)
-        connect(removeBtn.MouseButton1Click, function()
-            removeFromTrackerWhitelist(oreName)
-            rebuildTrackerList()
-            setTrackerState(false)
-            setStatus(trackerPromptStatus, "Removed " .. oreName, THEME.muted)
-        end)
-        table.insert(trackerRows, row)
-    end
-
-    captureGuiTransparency()
-end
-
 connect(partColorLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
     partColorList.CanvasSize = UDim2.new(0, 0, 0, partColorLayout.AbsoluteContentSize.Y + 8)
 end)
 connect(blacklistLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
     blacklistList.CanvasSize = UDim2.new(0, 0, 0, blacklistLayout.AbsoluteContentSize.Y + 8)
-end)
-connect(trackerLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
-    trackerList.CanvasSize = UDim2.new(0, 0, 0, trackerLayout.AbsoluteContentSize.Y + 8)
 end)
 
 updatePageButtons = function()
@@ -2060,7 +1869,7 @@ local function showPage(pageName)
     end
     if pageName == "esp" then
         contentTitle.Text = "Main"
-        contentSubtitle.Text = "Control normal ESP and prepare the WIP Tracker whitelist."
+        contentSubtitle.Text = "Control the normal ESP renderer."
     elseif pageName == "config" then
         contentTitle.Text = "ESP Config"
         contentSubtitle.Text = "Tune ESP range, label spacing, and Manual Tracer Settings."
@@ -2083,7 +1892,6 @@ local function shutdown()
     end
     destroyed = true
     espEnabled = false
-    trackerEnabled = false
     for _, connection in ipairs(connections) do
         if connection.Connected then
             connection:Disconnect()
@@ -2130,23 +1938,6 @@ local function closeLineColorPrompt()
     lineColorPrompt.Visible = false
 end
 
-local function openTrackerPrompt()
-    trackerPromptStatus.Text = ""
-    trackerPrompt.Visible = true
-    rebuildTrackerList()
-    if GUI_SETTINGS.animationsEnabled then
-        local promptScale = trackerPrompt:FindFirstChild("PromptScale")
-        if promptScale then
-            promptScale.Scale = 0.92
-            tween(promptScale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
-        end
-    end
-end
-
-local function closeTrackerPrompt()
-    trackerPrompt.Visible = false
-end
-
 openTracerEditPrompt = function(oreName)
     local color = CONFIG.partColors[oreName]
     selectedTracerName = oreName
@@ -2181,29 +1972,6 @@ connect(lineColorPromptApply.MouseButton1Click, function()
     CONFIG.defaultColor = loadedColor
     refreshAllAppearances()
     closeLineColorPrompt()
-end)
-
-connect(trackerConfigBtn.MouseButton1Click, openTrackerPrompt)
-connect(trackerCloseBtn.MouseButton1Click, closeTrackerPrompt)
-connect(trackerToggleBtn.MouseButton1Click, function()
-    setTrackerState(not trackerEnabled)
-end)
-connect(trackerAddBtn.MouseButton1Click, function()
-    local oreName = trim(trackerInput.Text)
-    if oreName == "" then
-        setStatus(trackerPromptStatus, "Ore name required.", THEME.danger)
-        return
-    end
-    if addToTrackerWhitelist(oreName) then
-        trackerInput.Text = ""
-        rebuildTrackerList()
-        if trackerEnabled then
-            setStatus(trackerStatus, "Tracker ESP is WIP. Gear edits whitelist only.", THEME.muted)
-        end
-        setStatus(trackerPromptStatus, "Added " .. oreName, THEME.success)
-    else
-        setStatus(trackerPromptStatus, oreName .. " is already tracked.", THEME.muted)
-    end
 end)
 
 connect(tracerCancelBtn.MouseButton1Click, closeTracerEditPrompt)
@@ -2512,7 +2280,6 @@ updateStatusPill()
 updateEspPill()
 rebuildPartColorList()
 rebuildBlacklistList()
-rebuildTrackerList()
 refreshUiInputs()
 applyGuiSettings()
 refreshAllAppearances()
