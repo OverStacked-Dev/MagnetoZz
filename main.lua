@@ -10,9 +10,9 @@ local chunksFolder = workspace:WaitForChild("Chunks")
 
 local THEME = {
     accent = Color3.fromRGB(72, 100, 255),
-    shell = Color3.fromRGB(10, 11, 15),
+    shell = Color3.fromRGB(21, 24, 34),
     sidebar = Color3.fromRGB(35, 37, 46),
-    content = Color3.fromRGB(90, 92, 102),
+    content = Color3.fromRGB(83, 87, 99),
     panel = Color3.fromRGB(37, 39, 48),
     panelAlt = Color3.fromRGB(24, 25, 32),
     text = Color3.fromRGB(245, 246, 255),
@@ -21,6 +21,7 @@ local THEME = {
     success = Color3.fromRGB(82, 195, 126),
     danger = Color3.fromRGB(224, 72, 72),
     border = Color3.fromRGB(16, 17, 21),
+    outline = Color3.fromRGB(111, 119, 146),
 }
 
 local CONFIG = {
@@ -43,12 +44,13 @@ local GUI_SETTINGS = {
     bodyTextSize = 12,
     buttonTextSize = 16,
     animationsEnabled = true,
+    toggleKey = Enum.KeyCode.RightShift,
 }
 
-local FINAL_SIZE = UDim2.new(0, 780, 0, 446)
-local FINAL_POSITION = UDim2.new(0.5, 0, 0, 76)
-local DEFAULT_CONFIG_PATH = "C:/Users/Cristi/Desktop/MagnetoZz/config.json"
-local FALLBACK_CONFIG_PATH = "MagnetoZz/config.json"
+local VERSION_URL = "https://raw.githubusercontent.com/OverStacked-Dev/MagnetoZz/main/version.json"
+local APP_VERSION = "v1.0.0"
+local FINAL_SIZE = UDim2.new(0, 800, 0, 456)
+local FINAL_POSITION = UDim2.new(0.5, 0, 0.5, 0)
 
 local espEnabled = false
 local destroyed = false
@@ -67,6 +69,7 @@ local titleTextLabels = {}
 local buttonTextLabels = {}
 local inputTextBoxes = {}
 local updatePageButtons
+local guiVisible = true
 
 local function trim(text)
     return (text or ""):match("^%s*(.-)%s*$")
@@ -82,6 +85,18 @@ local function tween(instance, info, properties)
     local t = TweenService:Create(instance, info, properties)
     t:Play()
     return t
+end
+
+local function safeTween(instance, info, properties)
+    if GUI_SETTINGS.animationsEnabled then
+        return tween(instance, info, properties)
+    end
+
+    for property, value in pairs(properties) do
+        instance[property] = value
+    end
+
+    return nil
 end
 
 local function addCorner(instance, radius)
@@ -185,6 +200,44 @@ local function colorToHex(color)
     return string.format("%02X%02X%02X", math.floor(color.R * 255 + 0.5), math.floor(color.G * 255 + 0.5), math.floor(color.B * 255 + 0.5))
 end
 
+local function keyCodeFromText(text)
+    text = trim(text):gsub("%s+", "")
+    if text == "" then
+        return nil
+    end
+
+    local lowered = text:lower()
+    for _, keyCode in ipairs(Enum.KeyCode:GetEnumItems()) do
+        if keyCode.Name:lower() == lowered then
+            return keyCode
+        end
+    end
+
+    return nil
+end
+
+local function fetchVersion()
+    local ok, raw = pcall(function()
+        return game:HttpGet(VERSION_URL)
+    end)
+
+    if not ok or type(raw) ~= "string" then
+        return
+    end
+
+    local decodeOk, payload = pcall(function()
+        return HttpService:JSONDecode(raw)
+    end)
+
+    if decodeOk and typeof(payload) == "table" and typeof(payload.version) == "string" then
+        local version = payload.version
+        if version:sub(1, 1):lower() ~= "v" then
+            version = "v" .. version
+        end
+        APP_VERSION = version
+    end
+end
+
 local function isIgnored(partName)
     return table.find(CONFIG.ignore, partName) ~= nil
 end
@@ -264,18 +317,24 @@ local screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MagnetoZzGui"
 screenGui.ResetOnSpawn = false
 screenGui.IgnoreGuiInset = true
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = playerGui
 
+local guiScale = Instance.new("UIScale")
+guiScale.Scale = 1
+
 local mainFrame = Instance.new("Frame")
-mainFrame.AnchorPoint = Vector2.new(0.5, 0)
+mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
 mainFrame.Position = FINAL_POSITION
 mainFrame.Size = UDim2.new(0, 0, 0, 0)
 mainFrame.BackgroundColor3 = THEME.shell
+mainFrame.BackgroundTransparency = 0.03
 mainFrame.BorderSizePixel = 0
 mainFrame.ClipsDescendants = true
 mainFrame.Parent = screenGui
 addCorner(mainFrame, 18)
-addStroke(mainFrame, THEME.border, 3)
+local mainStroke = addStroke(mainFrame, THEME.outline, 2)
+guiScale.Parent = mainFrame
 
 local dragHandle = Instance.new("Frame")
 dragHandle.Size = UDim2.new(1, 0, 0, 38)
@@ -318,7 +377,7 @@ addStroke(sidebar, THEME.border, 2)
 
 local contentFrame = Instance.new("Frame")
 contentFrame.Position = UDim2.new(1, 30, 0, 12)
-contentFrame.Size = UDim2.new(1, -189, 1, -24)
+contentFrame.Size = UDim2.new(1, -205, 1, -24)
 contentFrame.BackgroundColor3 = THEME.content
 contentFrame.BorderSizePixel = 0
 contentFrame.Visible = false
@@ -340,15 +399,27 @@ registerTitleText(sidebarTitle)
 
 local sidebarAccent = Instance.new("Frame")
 sidebarAccent.Position = UDim2.new(0, 9, 0, 44)
-sidebarAccent.Size = UDim2.new(0, 56, 0, 4)
+sidebarAccent.Size = UDim2.new(1, -18, 0, 4)
 sidebarAccent.BackgroundColor3 = THEME.accent
 sidebarAccent.BorderSizePixel = 0
 sidebarAccent.Parent = sidebar
 addCorner(sidebarAccent, 4)
 
+local sidebarVersion = Instance.new("TextLabel")
+sidebarVersion.Size = UDim2.new(1, -18, 0, 18)
+sidebarVersion.Position = UDim2.new(0, 9, 0, 52)
+sidebarVersion.BackgroundTransparency = 1
+sidebarVersion.Text = APP_VERSION
+sidebarVersion.TextColor3 = THEME.muted
+sidebarVersion.TextSize = 12
+sidebarVersion.Font = Enum.Font.Gotham
+sidebarVersion.TextXAlignment = Enum.TextXAlignment.Left
+sidebarVersion.Parent = sidebar
+registerBodyText(sidebarVersion)
+
 local buttonHolder = Instance.new("Frame")
 buttonHolder.Size = UDim2.new(1, -18, 0, 296)
-buttonHolder.Position = UDim2.new(0, 9, 0, 78)
+buttonHolder.Position = UDim2.new(0, 9, 0, 88)
 buttonHolder.BackgroundTransparency = 1
 buttonHolder.Parent = sidebar
 
@@ -400,7 +471,7 @@ registerBodyText(contentSubtitle)
 local closeBtn = Instance.new("TextButton")
 closeBtn.Size = UDim2.new(0, 42, 0, 42)
 closeBtn.AnchorPoint = Vector2.new(1, 0)
-closeBtn.Position = UDim2.new(1, 0, 0, 0)
+closeBtn.Position = UDim2.new(1, -8, 0, 0)
 closeBtn.AutoButtonColor = false
 closeBtn.BackgroundColor3 = THEME.danger
 closeBtn.BorderSizePixel = 0
@@ -564,6 +635,48 @@ local function setStatus(label, text, color)
     label.TextColor3 = color or THEME.muted
 end
 
+local function setGuiVisible(visible)
+    if destroyed or guiVisible == visible then
+        return
+    end
+
+    guiVisible = visible
+    mainFrame.Active = visible
+    if visible then
+        mainFrame.Visible = true
+    end
+
+    local targetScale = visible and 1 or 0.86
+    local targetTransparency = visible and 0.03 or 1
+    local targetStrokeTransparency = visible and 0 or 1
+    local easingDirection = visible and Enum.EasingDirection.In or Enum.EasingDirection.Out
+
+    local scaleTween = safeTween(
+        guiScale,
+        TweenInfo.new(0.5, Enum.EasingStyle.Back, easingDirection),
+        { Scale = targetScale }
+    )
+    safeTween(
+        mainFrame,
+        TweenInfo.new(0.5, Enum.EasingStyle.Back, easingDirection),
+        { BackgroundTransparency = targetTransparency }
+    )
+    safeTween(
+        mainStroke,
+        TweenInfo.new(0.5, Enum.EasingStyle.Back, easingDirection),
+        { Transparency = targetStrokeTransparency }
+    )
+
+    if not visible then
+        if scaleTween then
+            scaleTween.Completed:Wait()
+        end
+        if not guiVisible then
+            mainFrame.Visible = false
+        end
+    end
+end
+
 local espPage = makePage("esp")
 local configPage = makePage("config")
 local blacklistPage = makePage("blacklist")
@@ -663,9 +776,13 @@ makeLabel(guiMainSection, "Body Size", 252, 42, 100)
 local guiBodySizeInput = makeInput(guiMainSection, "12", 252, 62, 92)
 guiBodySizeInput.Text = tostring(GUI_SETTINGS.bodyTextSize)
 local guiAnimationToggle = makeActionButton(guiMainSection, "Animations: ON", 362, 62, 140, THEME.success)
+makeLabel(guiMainSection, "Toggle Key", 12, 102, 100)
+local guiKeybindInput = makeInput(guiMainSection, "RightShift", 12, 122, 130)
+guiKeybindInput.Text = GUI_SETTINGS.toggleKey.Name
 local guiApplyBtn = makeActionButton(guiMainSection, "Apply GUI", 12, 112, 120, THEME.accent)
-local guiResetBtn = makeActionButton(guiMainSection, "Reset GUI", 144, 112, 120, THEME.panelAlt)
-local guiStatus = makeStatusLabel(guiMainSection, 12, 156, 470)
+guiApplyBtn.Position = UDim2.new(0, 158, 0, 122)
+local guiResetBtn = makeActionButton(guiMainSection, "Reset GUI", 290, 122, 120, THEME.panelAlt)
+local guiStatus = makeStatusLabel(guiMainSection, 12, 166, 470)
 
 local guiExtraSection = makeSection(guiPage, "What Changes", 206, 96)
 local guiInfo = makeStatusLabel(guiExtraSection, 12, 36, 480)
@@ -686,33 +803,43 @@ local resetPathBtn = makeActionButton(profilesSection, "Later", 308, 120, 110, T
 local profilesStatus = makeStatusLabel(profilesSection, 12, 162, 450)
 
 local lineColorPrompt = Instance.new("Frame")
-lineColorPrompt.Size = UDim2.new(0, 260, 0, 156)
+lineColorPrompt.Size = UDim2.new(0, 300, 0, 170)
 lineColorPrompt.AnchorPoint = Vector2.new(0.5, 0.5)
 lineColorPrompt.Position = UDim2.new(0.5, 0, 0.5, 0)
 lineColorPrompt.BackgroundColor3 = THEME.panel
 lineColorPrompt.BorderSizePixel = 0
 lineColorPrompt.Visible = false
 lineColorPrompt.ZIndex = 20
-lineColorPrompt.Parent = contentFrame
+lineColorPrompt.Parent = mainFrame
 addCorner(lineColorPrompt, 16)
 addStroke(lineColorPrompt, THEME.border, 2)
+local lineColorPromptScale = Instance.new("UIScale")
+lineColorPromptScale.Name = "PromptScale"
+lineColorPromptScale.Scale = 1
+lineColorPromptScale.Parent = lineColorPrompt
 
-local promptTitle = makeStatusLabel(lineColorPrompt, 16, 14, 220)
+local promptTitle = makeStatusLabel(lineColorPrompt, 18, 14, 250)
 promptTitle.Text = "Default Line Color"
 promptTitle.TextColor3 = THEME.white
 promptTitle.TextSize = 18
 promptTitle.Font = Enum.Font.GothamBold
+promptTitle.ZIndex = 21
 
-local promptHint = makeStatusLabel(lineColorPrompt, 16, 42, 220)
+local promptHint = makeStatusLabel(lineColorPrompt, 18, 44, 250)
 promptHint.Size = UDim2.new(1, -32, 0, 32)
 promptHint.TextWrapped = true
 promptHint.Text = "Enter a HEX color like FFFFFF."
 promptHint.TextColor3 = THEME.white
+promptHint.ZIndex = 21
 
-local lineColorPromptInput = makeInput(lineColorPrompt, "FFFFFF", 16, 82, 104)
-local lineColorPromptApply = makeActionButton(lineColorPrompt, "Apply", 132, 82, 56, THEME.accent)
-local lineColorPromptCancel = makeActionButton(lineColorPrompt, "Close", 194, 82, 50, THEME.panelAlt)
-local lineColorPromptStatus = makeStatusLabel(lineColorPrompt, 16, 122, 220)
+local lineColorPromptInput = makeInput(lineColorPrompt, "FFFFFF", 18, 88, 118)
+lineColorPromptInput.ZIndex = 21
+local lineColorPromptApply = makeActionButton(lineColorPrompt, "Apply", 148, 88, 64, THEME.accent)
+lineColorPromptApply.ZIndex = 21
+local lineColorPromptCancel = makeActionButton(lineColorPrompt, "Close", 222, 88, 58, THEME.panelAlt)
+lineColorPromptCancel.ZIndex = 21
+local lineColorPromptStatus = makeStatusLabel(lineColorPrompt, 18, 132, 250)
+lineColorPromptStatus.ZIndex = 21
 
 local partColorRows = {}
 local blacklistRows = {}
@@ -724,6 +851,7 @@ local function refreshUiInputs()
     guiAccentInput.Text = colorToHex(GUI_SETTINGS.accentColor)
     guiTitleSizeInput.Text = tostring(GUI_SETTINGS.titleTextSize)
     guiBodySizeInput.Text = tostring(GUI_SETTINGS.bodyTextSize)
+    guiKeybindInput.Text = GUI_SETTINGS.toggleKey.Name
     guiAnimationToggle.Text = GUI_SETTINGS.animationsEnabled and "Animations: ON" or "Animations: OFF"
     guiAnimationToggle.BackgroundColor3 = GUI_SETTINGS.animationsEnabled and THEME.success or THEME.danger
 end
@@ -767,6 +895,9 @@ local function applyGuiSettings()
 
     accentName.TextSize = math.max(16, GUI_SETTINGS.bodyTextSize + 4)
     promptTitle.TextSize = math.max(18, GUI_SETTINGS.bodyTextSize + 6)
+    applyBtn.BackgroundColor3 = GUI_SETTINGS.accentColor
+    guiApplyBtn.BackgroundColor3 = GUI_SETTINGS.accentColor
+    lineColorPromptApply.BackgroundColor3 = GUI_SETTINGS.accentColor
 
     updatePageButtons()
 end
@@ -1120,6 +1251,13 @@ local function openLineColorPrompt()
     lineColorPromptStatus.Text = ""
     lineColorPrompt.Visible = true
     lineColorPrompt.ZIndex = 20
+    if GUI_SETTINGS.animationsEnabled then
+        local promptScale = lineColorPrompt:FindFirstChild("PromptScale")
+        if promptScale then
+            promptScale.Scale = 0.92
+            tween(promptScale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+        end
+    end
 end
 
 local function closeLineColorPrompt()
@@ -1155,6 +1293,18 @@ connect(UserInputService.InputChanged, function(input)
     if dragging and input.UserInputType == Enum.UserInputType.MouseMovement then
         local delta = input.Position - dragStart
         mainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+    end
+end)
+
+connect(UserInputService.InputBegan, function(input, gameProcessed)
+    if gameProcessed or input.UserInputType ~= Enum.UserInputType.Keyboard then
+        return
+    end
+
+    if input.KeyCode == GUI_SETTINGS.toggleKey then
+        task.spawn(function()
+            setGuiVisible(not guiVisible)
+        end)
     end
 end)
 
@@ -1202,9 +1352,15 @@ connect(guiApplyBtn.MouseButton1Click, function()
     local accentColor = colorFromHex(guiAccentInput.Text)
     local titleSize = tonumber(trim(guiTitleSizeInput.Text))
     local bodySize = tonumber(trim(guiBodySizeInput.Text))
+    local toggleKey = keyCodeFromText(guiKeybindInput.Text)
 
     if not accentColor then
         setStatus(guiStatus, "GUI accent HEX is invalid.", THEME.danger)
+        return
+    end
+
+    if not toggleKey then
+        setStatus(guiStatus, "Toggle key is invalid.", THEME.danger)
         return
     end
 
@@ -1212,6 +1368,7 @@ connect(guiApplyBtn.MouseButton1Click, function()
     GUI_SETTINGS.titleTextSize = math.clamp(titleSize or GUI_SETTINGS.titleTextSize, 20, 34)
     GUI_SETTINGS.bodyTextSize = math.clamp(bodySize or GUI_SETTINGS.bodyTextSize, 11, 18)
     GUI_SETTINGS.buttonTextSize = math.clamp(GUI_SETTINGS.bodyTextSize + 4, 14, 20)
+    GUI_SETTINGS.toggleKey = toggleKey
     applyGuiSettings()
     refreshUiInputs()
     setStatus(guiStatus, "GUI settings applied.", THEME.success)
@@ -1223,6 +1380,7 @@ connect(guiResetBtn.MouseButton1Click, function()
     GUI_SETTINGS.bodyTextSize = 12
     GUI_SETTINGS.buttonTextSize = 16
     GUI_SETTINGS.animationsEnabled = true
+    GUI_SETTINGS.toggleKey = Enum.KeyCode.RightShift
     applyGuiSettings()
     refreshUiInputs()
     setStatus(guiStatus, "GUI settings reset.", THEME.success)
@@ -1279,12 +1437,15 @@ connect(chunksFolder.DescendantAdded, function(descendant) registerPart(descenda
 connect(chunksFolder.DescendantRemoving, function(descendant) unregisterPart(descendant) end)
 connect(RunService.Heartbeat, function(deltaTime)
     heartbeatAccumulator = heartbeatAccumulator + deltaTime
-    if heartbeatAccumulator < CONFIG.updateInterval then return end
+    if heartbeatAccumulator < CONFIG.updateInterval then
+        return
+    end
     heartbeatAccumulator = 0
     updateEsp()
 end)
 
 local function playIntro()
+    mainFrame.Position = FINAL_POSITION
     local introGrow = tween(mainFrame, TweenInfo.new(1, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = UDim2.new(0, 420, 0, 200) })
     introGrow.Completed:Wait()
     local lineTween = tween(introLine, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.new(0.84, 0, 0, 18) })
@@ -1296,7 +1457,7 @@ local function playIntro()
     contentFrame.Visible = true
     local openTween = tween(mainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Size = FINAL_SIZE })
     tween(sidebar, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Position = UDim2.new(0, 12, 0, 12) })
-    tween(contentFrame, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Position = UDim2.new(0, 189, 0, 12) })
+    tween(contentFrame, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Position = UDim2.new(0, 197, 0, 12) })
     tween(introLine, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { BackgroundTransparency = 1 })
     tween(introTitle, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { TextTransparency = 1 })
     openTween.Completed:Wait()
@@ -1304,6 +1465,8 @@ local function playIntro()
     introTitle.Visible = false
 end
 
+fetchVersion()
+sidebarVersion.Text = APP_VERSION
 rebuildPartColorList()
 rebuildBlacklistList()
 refreshUiInputs()
