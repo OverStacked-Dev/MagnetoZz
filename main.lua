@@ -45,6 +45,7 @@ local GUI_SETTINGS = {
     buttonTextSize = 16,
     animationsEnabled = true,
     toggleKey = Enum.KeyCode.RightShift,
+    espToggleKey = Enum.KeyCode.RightControl,
 }
 
 local VERSION_URL = "https://raw.githubusercontent.com/OverStacked-Dev/MagnetoZz/main/version.json"
@@ -321,38 +322,46 @@ screenGui.IgnoreGuiInset = true
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = playerGui
 
-local statusPill = Instance.new("TextButton")
-statusPill.Size = UDim2.new(0, 92, 0, 26)
-statusPill.Position = UDim2.new(0, 172, 0, 18)
-statusPill.AutoButtonColor = false
-statusPill.BackgroundColor3 = THEME.success
-statusPill.BackgroundTransparency = 0.08
-statusPill.BorderSizePixel = 0
-statusPill.Text = ""
-statusPill.Parent = screenGui
-addCorner(statusPill, 14)
-addStroke(statusPill, Color3.fromRGB(25, 100, 54), 2)
+local function makeTopPill(x, text)
+    local pill = Instance.new("TextButton")
+    pill.Size = UDim2.new(0, 96, 0, 26)
+    pill.Position = UDim2.new(0, x, 0, 18)
+    pill.AutoButtonColor = false
+    pill.BackgroundColor3 = THEME.success
+    pill.BackgroundTransparency = 0.04
+    pill.BorderSizePixel = 0
+    pill.Text = ""
+    pill.Parent = screenGui
+    addCorner(pill, 14)
+    addStroke(pill, Color3.fromRGB(18, 22, 32), 2)
 
-local statusDot = Instance.new("Frame")
-statusDot.Size = UDim2.new(0, 8, 0, 8)
-statusDot.Position = UDim2.new(0, 10, 0.5, -4)
-statusDot.BackgroundColor3 = THEME.white
-statusDot.BackgroundTransparency = 0.05
-statusDot.BorderSizePixel = 0
-statusDot.Parent = statusPill
-addCorner(statusDot, 8)
+    local dot = Instance.new("Frame")
+    dot.Size = UDim2.new(0, 7, 0, 7)
+    dot.Position = UDim2.new(0, 11, 0.5, -3)
+    dot.BackgroundColor3 = THEME.white
+    dot.BackgroundTransparency = 0.05
+    dot.BorderSizePixel = 0
+    dot.Parent = pill
+    addCorner(dot, 7)
 
-local statusText = Instance.new("TextLabel")
-statusText.Size = UDim2.new(1, -26, 1, 0)
-statusText.Position = UDim2.new(0, 24, 0, 0)
-statusText.BackgroundTransparency = 1
-statusText.Text = "Opened"
-statusText.TextColor3 = THEME.white
-statusText.TextSize = 12
-statusText.Font = Enum.Font.GothamBold
-statusText.TextXAlignment = Enum.TextXAlignment.Left
-statusText.Parent = statusPill
-enableButtonMotion(statusPill, 1.04, 0.94)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -26, 1, 0)
+    label.Position = UDim2.new(0, 24, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = THEME.white
+    label.TextSize = 12
+    label.Font = Enum.Font.GothamBold
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.Parent = pill
+
+    enableButtonMotion(pill, 1.04, 0.94)
+    return pill, label, dot
+end
+
+local statusPill, statusText, statusDot = makeTopPill(172, "Opened")
+local espPill, espPillText, espPillDot = makeTopPill(274, "ESP OFF")
+espPill.BackgroundColor3 = THEME.danger
 
 local guiScale = Instance.new("UIScale")
 guiScale.Scale = 1
@@ -672,12 +681,27 @@ end
 local function updateStatusPill()
     if guiVisible then
         statusPill.BackgroundColor3 = THEME.success
+        statusDot.BackgroundColor3 = Color3.fromRGB(218, 255, 232)
         statusText.Text = "Opened"
     else
         statusPill.BackgroundColor3 = THEME.danger
+        statusDot.BackgroundColor3 = Color3.fromRGB(255, 224, 224)
         statusText.Text = "Closed"
     end
 end
+
+local function updateEspPill()
+    if espEnabled then
+        espPill.BackgroundColor3 = THEME.success
+        espPillDot.BackgroundColor3 = Color3.fromRGB(218, 255, 232)
+        espPillText.Text = "ESP ON"
+    else
+        espPill.BackgroundColor3 = THEME.danger
+        espPillDot.BackgroundColor3 = Color3.fromRGB(255, 224, 224)
+        espPillText.Text = "ESP OFF"
+    end
+end
+
 
 local function captureGuiTransparency()
     table.clear(guiOriginalTransparency)
@@ -853,9 +877,11 @@ local guiAnimationToggle = makeActionButton(guiMainSection, "Animations: ON", 36
 makeLabel(guiMainSection, "Toggle Key", 12, 102, 100)
 local guiKeybindInput = makeInput(guiMainSection, "RightShift", 12, 122, 130)
 guiKeybindInput.Text = GUI_SETTINGS.toggleKey.Name
-local guiApplyBtn = makeActionButton(guiMainSection, "Apply GUI", 12, 112, 120, THEME.accent)
-guiApplyBtn.Position = UDim2.new(0, 158, 0, 122)
-local guiResetBtn = makeActionButton(guiMainSection, "Reset GUI", 290, 122, 120, THEME.panelAlt)
+makeLabel(guiMainSection, "ESP Toggle Key", 160, 102, 120)
+local guiEspKeybindInput = makeInput(guiMainSection, "RightControl", 160, 122, 130)
+guiEspKeybindInput.Text = GUI_SETTINGS.espToggleKey.Name
+local guiApplyBtn = makeActionButton(guiMainSection, "Apply GUI", 310, 122, 120, THEME.accent)
+local guiResetBtn = makeActionButton(guiMainSection, "Reset GUI", 442, 122, 100, THEME.panelAlt)
 local guiStatus = makeStatusLabel(guiMainSection, 12, 166, 470)
 
 local guiExtraSection = makeSection(guiPage, "What Changes", 206, 96)
@@ -926,6 +952,7 @@ local function refreshUiInputs()
     guiTitleSizeInput.Text = tostring(GUI_SETTINGS.titleTextSize)
     guiBodySizeInput.Text = tostring(GUI_SETTINGS.bodyTextSize)
     guiKeybindInput.Text = GUI_SETTINGS.toggleKey.Name
+    guiEspKeybindInput.Text = GUI_SETTINGS.espToggleKey.Name
     guiAnimationToggle.Text = GUI_SETTINGS.animationsEnabled and "Animations: ON" or "Animations: OFF"
     guiAnimationToggle.BackgroundColor3 = GUI_SETTINGS.animationsEnabled and THEME.success or THEME.danger
 end
@@ -1108,6 +1135,21 @@ local function hideAllEntries()
             setEntryVisible(entry, false)
         end
     end
+end
+
+local function setEspState(enabled)
+    espEnabled = enabled
+    if espEnabled then
+        espToggleBtn.Text = "ESP ON"
+        espToggleBtn.BackgroundColor3 = THEME.success
+        setStatus(espStatus, "ESP enabled. Cached parts update on heartbeat.", THEME.white)
+    else
+        espToggleBtn.Text = "ESP OFF"
+        espToggleBtn.BackgroundColor3 = THEME.danger
+        setStatus(espStatus, "ESP disabled. All lines hidden.", THEME.muted)
+        hideAllEntries()
+    end
+    updateEspPill()
 end
 
 local function updateEntry(entry, playerPos)
@@ -1383,6 +1425,8 @@ connect(UserInputService.InputBegan, function(input, gameProcessed)
         task.spawn(function()
             setGuiVisible(not guiVisible)
         end)
+    elseif input.KeyCode == GUI_SETTINGS.espToggleKey then
+        setEspState(not espEnabled)
     end
 end)
 
@@ -1392,18 +1436,12 @@ connect(statusPill.MouseButton1Click, function()
     end)
 end)
 
+connect(espPill.MouseButton1Click, function()
+    setEspState(not espEnabled)
+end)
+
 connect(espToggleBtn.MouseButton1Click, function()
-    espEnabled = not espEnabled
-    if espEnabled then
-        espToggleBtn.Text = "ESP ON"
-        espToggleBtn.BackgroundColor3 = THEME.success
-        setStatus(espStatus, "ESP enabled. Cached parts update on heartbeat.", THEME.white)
-    else
-        espToggleBtn.Text = "ESP OFF"
-        espToggleBtn.BackgroundColor3 = THEME.danger
-        setStatus(espStatus, "ESP disabled. All lines hidden.", THEME.muted)
-        hideAllEntries()
-    end
+    setEspState(not espEnabled)
 end)
 
 connect(applyBtn.MouseButton1Click, function()
@@ -1437,6 +1475,7 @@ connect(guiApplyBtn.MouseButton1Click, function()
     local titleSize = tonumber(trim(guiTitleSizeInput.Text))
     local bodySize = tonumber(trim(guiBodySizeInput.Text))
     local toggleKey = keyCodeFromText(guiKeybindInput.Text)
+    local espToggleKey = keyCodeFromText(guiEspKeybindInput.Text)
 
     if not accentColor then
         setStatus(guiStatus, "GUI accent HEX is invalid.", THEME.danger)
@@ -1448,11 +1487,17 @@ connect(guiApplyBtn.MouseButton1Click, function()
         return
     end
 
+    if not espToggleKey then
+        setStatus(guiStatus, "ESP toggle key is invalid.", THEME.danger)
+        return
+    end
+
     GUI_SETTINGS.accentColor = accentColor
     GUI_SETTINGS.titleTextSize = math.clamp(titleSize or GUI_SETTINGS.titleTextSize, 20, 34)
     GUI_SETTINGS.bodyTextSize = math.clamp(bodySize or GUI_SETTINGS.bodyTextSize, 11, 18)
     GUI_SETTINGS.buttonTextSize = math.clamp(GUI_SETTINGS.bodyTextSize + 4, 14, 20)
     GUI_SETTINGS.toggleKey = toggleKey
+    GUI_SETTINGS.espToggleKey = espToggleKey
     applyGuiSettings()
     refreshUiInputs()
     setStatus(guiStatus, "GUI settings applied.", THEME.success)
@@ -1465,6 +1510,7 @@ connect(guiResetBtn.MouseButton1Click, function()
     GUI_SETTINGS.buttonTextSize = 16
     GUI_SETTINGS.animationsEnabled = true
     GUI_SETTINGS.toggleKey = Enum.KeyCode.RightShift
+    GUI_SETTINGS.espToggleKey = Enum.KeyCode.RightControl
     applyGuiSettings()
     refreshUiInputs()
     setStatus(guiStatus, "GUI settings reset.", THEME.success)
@@ -1552,6 +1598,7 @@ end
 fetchVersion()
 sidebarVersion.Text = APP_VERSION
 updateStatusPill()
+updateEspPill()
 rebuildPartColorList()
 rebuildBlacklistList()
 refreshUiInputs()
