@@ -29,6 +29,7 @@ local CONFIG = {
     labelDistance = 6,
     updateInterval = 0.05,
     lineThickness = 0.08,
+    lineOffset = Vector3.new(0, 0, 2),
     defaultColor = Color3.fromRGB(255, 255, 255),
     partColors = {
         OreNode = Color3.fromRGB(0, 200, 255),
@@ -910,7 +911,9 @@ local function updateEntry(entry, playerPos)
         unregisterPart(part)
         return
     end
-    local direction = part.Position - playerPos
+    local fromPos = playerPos + CONFIG.lineOffset
+    local toPos = part.Position + CONFIG.lineOffset
+    local direction = toPos - fromPos
     local distance = direction.Magnitude
     local shouldShow = not isIgnored(part.Name) and (CONFIG.radius == 0 or distance <= CONFIG.radius)
     if not shouldShow or distance <= 0.05 then
@@ -921,11 +924,11 @@ local function updateEntry(entry, playerPos)
     end
     ensureEntryVisuals(entry)
     refreshEntryAppearance(entry)
-    local midpoint = playerPos + direction / 2
+    local midpoint = fromPos + direction / 2
     local labelOffset = math.min(CONFIG.labelDistance, math.max(2, distance * 0.25))
     entry.line.Size = Vector3.new(CONFIG.lineThickness, CONFIG.lineThickness, distance)
-    entry.line.CFrame = CFrame.lookAt(midpoint, part.Position)
-    entry.anchor.CFrame = CFrame.new(playerPos + direction.Unit * labelOffset)
+    entry.line.CFrame = CFrame.lookAt(midpoint, toPos)
+    entry.anchor.CFrame = CFrame.new(fromPos + direction.Unit * labelOffset)
     setEntryVisible(entry, true)
 end
 
