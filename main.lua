@@ -321,6 +321,39 @@ screenGui.IgnoreGuiInset = true
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = playerGui
 
+local statusPill = Instance.new("TextButton")
+statusPill.Size = UDim2.new(0, 92, 0, 26)
+statusPill.Position = UDim2.new(0, 172, 0, 18)
+statusPill.AutoButtonColor = false
+statusPill.BackgroundColor3 = THEME.success
+statusPill.BackgroundTransparency = 0.08
+statusPill.BorderSizePixel = 0
+statusPill.Text = ""
+statusPill.Parent = screenGui
+addCorner(statusPill, 14)
+addStroke(statusPill, Color3.fromRGB(25, 100, 54), 2)
+
+local statusDot = Instance.new("Frame")
+statusDot.Size = UDim2.new(0, 8, 0, 8)
+statusDot.Position = UDim2.new(0, 10, 0.5, -4)
+statusDot.BackgroundColor3 = THEME.white
+statusDot.BackgroundTransparency = 0.05
+statusDot.BorderSizePixel = 0
+statusDot.Parent = statusPill
+addCorner(statusDot, 8)
+
+local statusText = Instance.new("TextLabel")
+statusText.Size = UDim2.new(1, -26, 1, 0)
+statusText.Position = UDim2.new(0, 24, 0, 0)
+statusText.BackgroundTransparency = 1
+statusText.Text = "Opened"
+statusText.TextColor3 = THEME.white
+statusText.TextSize = 12
+statusText.Font = Enum.Font.GothamBold
+statusText.TextXAlignment = Enum.TextXAlignment.Left
+statusText.Parent = statusPill
+enableButtonMotion(statusPill, 1.04, 0.94)
+
 local guiScale = Instance.new("UIScale")
 guiScale.Scale = 1
 
@@ -636,6 +669,16 @@ local function setStatus(label, text, color)
     label.TextColor3 = color or THEME.muted
 end
 
+local function updateStatusPill()
+    if guiVisible then
+        statusPill.BackgroundColor3 = THEME.success
+        statusText.Text = "Opened"
+    else
+        statusPill.BackgroundColor3 = THEME.danger
+        statusText.Text = "Closed"
+    end
+end
+
 local function captureGuiTransparency()
     table.clear(guiOriginalTransparency)
 
@@ -683,6 +726,7 @@ local function setGuiVisible(visible)
 
     guiVisible = visible
     mainFrame.Active = visible
+    updateStatusPill()
     if visible then
         mainFrame.Visible = true
     end
@@ -1342,6 +1386,12 @@ connect(UserInputService.InputBegan, function(input, gameProcessed)
     end
 end)
 
+connect(statusPill.MouseButton1Click, function()
+    task.spawn(function()
+        setGuiVisible(not guiVisible)
+    end)
+end)
+
 connect(espToggleBtn.MouseButton1Click, function()
     espEnabled = not espEnabled
     if espEnabled then
@@ -1501,6 +1551,7 @@ end
 
 fetchVersion()
 sidebarVersion.Text = APP_VERSION
+updateStatusPill()
 rebuildPartColorList()
 rebuildBlacklistList()
 refreshUiInputs()
