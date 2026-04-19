@@ -876,14 +876,14 @@ local profilesPage = makePage("profiles")
 local espSection = makeSection(espPage, "Runtime", 0, 176)
 local espToggleBtn = makeActionButton(espSection, "ESP OFF", 12, 44, 146, THEME.danger)
 local espStatus = makeStatusLabel(espSection, 172, 52, 300)
-local trackerToggleBtn = makeActionButton(espSection, "Tracker ESP OFF", 12, 86, 146, THEME.danger)
-local trackerConfigBtn = makeActionButton(espSection, "CFG", 172, 86, 64, THEME.panelAlt)
+local trackerToggleBtn = makeActionButton(espSection, "Tracker ESP WIP", 12, 86, 146, THEME.panelAlt)
+local trackerConfigBtn = makeActionButton(espSection, "Gear", 172, 86, 64, THEME.panelAlt)
 local trackerStatus = makeStatusLabel(espSection, 248, 94, 260)
-trackerStatus.Text = "Whitelist-only tracker is off."
+trackerStatus.Text = "WIP. Gear edits the future tracker whitelist only."
 local espInfo = makeStatusLabel(espSection, 12, 134, 450)
 espInfo.Size = UDim2.new(1, -24, 0, 24)
 espInfo.TextWrapped = true
-espInfo.Text = "ESP and Tracker ESP are separate. Both use radius, labels, colors, and closest-target rendering."
+espInfo.Text = "Normal ESP is active. Tracker ESP is parked as WIP so we can finish it cleanly later."
 espInfo.TextColor3 = THEME.white
 
 local themeSection = makeSection(espPage, "Visual Theme", 192, 134)
@@ -918,10 +918,10 @@ defaultColorLabel.Visible = false
 local defaultColorInput = makeInput(configTop, "FFFFFF", 148, 62, 108)
 defaultColorInput.Text = colorToHex(CONFIG.defaultColor)
 defaultColorInput.Visible = false
-makeLabel(configTop, "Label Distance", 236, 42, 110)
-local labelDistanceInput = makeInput(configTop, "6", 236, 62, 108)
+makeLabel(configTop, "Label Distance", 244, 42, 110)
+local labelDistanceInput = makeInput(configTop, "6", 244, 62, 108)
 labelDistanceInput.Text = tostring(CONFIG.labelDistance)
-local applyBtn = makeActionButton(configTop, "Apply", 386, 62, 92, THEME.accent)
+local applyBtn = makeActionButton(configTop, "Apply", 392, 62, 92, THEME.accent)
 local applyStatus = makeStatusLabel(configTop, 18, 98, 360)
 
 local partColorSection = makeSection(configPage, "Manual Tracer Settings", 134, 202)
@@ -963,7 +963,7 @@ local blacklistInput = makeInput(blacklistSection, "Ore to ignore", 127, 246, 22
 local addBlacklistBtn = makeActionButton(blacklistSection, "Add", 357, 246, 86, THEME.success)
 local blacklistStatus = makeStatusLabel(blacklistSection, 12, 286, 360)
 
-local guiMainSection = makeSection(guiPage, "Gui Settings", 0, 190)
+local guiMainSection = makeSection(guiPage, "GUI Settings", 0, 190)
 makeLabel(guiMainSection, "GUI Accent", 12, 42, 100)
 local guiAccentInput = makeInput(guiMainSection, "4864FF", 12, 62, 110)
 guiAccentInput.Text = colorToHex(GUI_SETTINGS.accentColor)
@@ -995,11 +995,11 @@ local profilesSection = makeSection(profilesPage, "Save / Load Profile", 0, 190)
 local profilesHint = makeStatusLabel(profilesSection, 12, 46, 500)
 profilesHint.Size = UDim2.new(1, -24, 0, 56)
 profilesHint.TextWrapped = true
-profilesHint.Text = "Save and load your profile from Supabase. Blacklist, Tracker whitelist, and Manual Tracer Settings use your Roblox UserId."
+profilesHint.Text = "Save and load your profile from Supabase. Blacklist and Manual Tracer Settings use your Roblox UserId."
 profilesHint.TextColor3 = THEME.white
 local exportBtn = makeActionButton(profilesSection, "Save", 12, 120, 136, THEME.success)
 local importBtn = makeActionButton(profilesSection, "Load", 160, 120, 136, THEME.accent)
-local resetPathBtn = makeActionButton(profilesSection, "DataBase Info", 308, 120, 132, THEME.panelAlt)
+local resetPathBtn = makeActionButton(profilesSection, "Database Info", 308, 120, 132, THEME.panelAlt)
 local profilesStatus = makeStatusLabel(profilesSection, 12, 162, 450)
 
 local lineColorPrompt = Instance.new("Frame")
@@ -1067,7 +1067,7 @@ trackerPromptTitle.ZIndex = 21
 local trackerPromptHint = makeStatusLabel(trackerPrompt, 18, 42, 330)
 trackerPromptHint.Size = UDim2.new(1, -36, 0, 34)
 trackerPromptHint.TextWrapped = true
-trackerPromptHint.Text = "Tracker ESP only renders exact ore names from this whitelist."
+trackerPromptHint.Text = "Whitelist saved for the future Tracker ESP. Rendering stays disabled while this is WIP."
 trackerPromptHint.TextColor3 = THEME.white
 trackerPromptHint.ZIndex = 21
 
@@ -1499,11 +1499,11 @@ local function loadConfig()
     rebuildBlacklistList()
     rebuildTrackerList()
     if trackerEnabled then
-        if #CONFIG.trackerWhitelist == 0 then
-            setStatus(trackerStatus, "Tracker on, but whitelist is empty.", THEME.danger)
-        else
-            setStatus(trackerStatus, "Rendering whitelisted ores only.", THEME.white)
-        end
+        trackerEnabled = false
+        trackerToggleBtn.Text = "Tracker ESP WIP"
+        trackerToggleBtn.BackgroundColor3 = THEME.panelAlt
+        table.clear(trackerActiveEntries)
+        setStatus(trackerStatus, "Tracker ESP is WIP. Gear edits whitelist only.", THEME.muted)
     end
     refreshAllAppearances()
     requestTargetRefresh()
@@ -1689,36 +1689,21 @@ local function setEspState(enabled)
         espToggleBtn.BackgroundColor3 = THEME.danger
         setStatus(espStatus, "Normal ESP disabled.", THEME.muted)
         table.clear(activeEntries)
-        if trackerEnabled then
-            requestTargetRefresh()
-        else
-            hideAllEntries()
-        end
+        hideAllEntries()
     end
     updateEspPill()
 end
 
-local function setTrackerState(enabled)
-    trackerEnabled = enabled
-    if trackerEnabled then
-        trackerToggleBtn.Text = "Tracker ESP ON"
-        trackerToggleBtn.BackgroundColor3 = THEME.success
-        if #CONFIG.trackerWhitelist == 0 then
-            setStatus(trackerStatus, "Tracker on, but whitelist is empty.", THEME.danger)
-        else
-            setStatus(trackerStatus, "Rendering whitelisted ores only.", THEME.white)
-        end
+local function setTrackerState(_enabled)
+    trackerEnabled = false
+    trackerToggleBtn.Text = "Tracker ESP WIP"
+    trackerToggleBtn.BackgroundColor3 = THEME.panelAlt
+    setStatus(trackerStatus, "Tracker ESP is WIP. Gear edits whitelist only.", THEME.muted)
+    table.clear(trackerActiveEntries)
+    if espEnabled then
         requestTargetRefresh()
     else
-        trackerToggleBtn.Text = "Tracker ESP OFF"
-        trackerToggleBtn.BackgroundColor3 = THEME.danger
-        setStatus(trackerStatus, "Whitelist-only tracker is off.", THEME.muted)
-        table.clear(trackerActiveEntries)
-        if espEnabled then
-            requestTargetRefresh()
-        else
-            hideAllEntries()
-        end
+        hideAllEntries()
     end
 end
 
@@ -1776,7 +1761,7 @@ local function updateEntry(entry, playerPos)
 end
 
 local function updateEsp()
-    if destroyed or (not espEnabled and not trackerEnabled) then
+    if destroyed or not espEnabled then
         return
     end
     local character = player.Character
@@ -1814,13 +1799,10 @@ local function updateEsp()
         updateList(activeEntries, false)
     end
 
-    if trackerEnabled then
-        updateList(trackerActiveEntries, true)
-    end
 end
 
 local function rebuildEspTargets()
-    if destroyed or (not espEnabled and not trackerEnabled) then
+    if destroyed or not espEnabled then
         hideAllEntries()
         return
     end
@@ -1876,9 +1858,6 @@ local function rebuildEspTargets()
             if CONFIG.radius == 0 or distance <= CONFIG.radius then
                 if espEnabled then
                     pushCandidate(candidates, nearestByName, part, entry, distance)
-                end
-                if trackerEnabled and isTrackerWhitelisted(part.Name) then
-                    pushCandidate(trackerCandidates, trackerNearestByName, part, entry, distance)
                 end
             elseif entry.visible then
                 setEntryVisible(entry, false)
@@ -2049,9 +2028,7 @@ rebuildTrackerList = function()
         connect(removeBtn.MouseButton1Click, function()
             removeFromTrackerWhitelist(oreName)
             rebuildTrackerList()
-            if trackerEnabled and #CONFIG.trackerWhitelist == 0 then
-                setStatus(trackerStatus, "Tracker on, but whitelist is empty.", THEME.danger)
-            end
+            setTrackerState(false)
             setStatus(trackerPromptStatus, "Removed " .. oreName, THEME.muted)
         end)
         table.insert(trackerRows, row)
@@ -2083,7 +2060,7 @@ local function showPage(pageName)
     end
     if pageName == "esp" then
         contentTitle.Text = "Main"
-        contentSubtitle.Text = "Control the normal ESP and the whitelist-only Tracker ESP."
+        contentSubtitle.Text = "Control normal ESP and prepare the WIP Tracker whitelist."
     elseif pageName == "config" then
         contentTitle.Text = "ESP Config"
         contentSubtitle.Text = "Tune ESP range, label spacing, and Manual Tracer Settings."
@@ -2091,7 +2068,7 @@ local function showPage(pageName)
         contentTitle.Text = "Blacklist"
         contentSubtitle.Text = "Hide ores you do not want MagnetoZz to trace."
     elseif pageName == "gui" then
-        contentTitle.Text = "Gui Settings"
+        contentTitle.Text = "GUI Settings"
         contentSubtitle.Text = "Menu accent, text sizes, and interface animations."
     else
         contentTitle.Text = "Save / Load Profile"
@@ -2106,6 +2083,7 @@ local function shutdown()
     end
     destroyed = true
     espEnabled = false
+    trackerEnabled = false
     for _, connection in ipairs(connections) do
         if connection.Connected then
             connection:Disconnect()
@@ -2124,7 +2102,7 @@ end
 makePageButton("esp", "Main", 1)
 makePageButton("config", "ESP Config", 2)
 makePageButton("blacklist", "Blacklist", 3)
-makePageButton("gui", "Gui Settings", 4)
+makePageButton("gui", "GUI Settings", 4)
 makePageButton("profiles", "Profiles", 5)
 for pageName, button in pairs(pageButtons) do
     connect(button.MouseButton1Click, function() showPage(pageName) end)
@@ -2220,7 +2198,7 @@ connect(trackerAddBtn.MouseButton1Click, function()
         trackerInput.Text = ""
         rebuildTrackerList()
         if trackerEnabled then
-            setStatus(trackerStatus, "Rendering whitelisted ores only.", THEME.white)
+            setStatus(trackerStatus, "Tracker ESP is WIP. Gear edits whitelist only.", THEME.muted)
         end
         setStatus(trackerPromptStatus, "Added " .. oreName, THEME.success)
     else
