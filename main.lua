@@ -6,7 +6,8 @@ local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
-local chunksFolder = workspace:WaitForChild("Chunks")
+local chunksFolder = workspace:FindFirstChild("Chunks")
+local boundChunksFolder = nil
 
 local THEME = {
     accent = Color3.fromRGB(72, 100, 255),
@@ -876,7 +877,7 @@ local espSection = makeSection(espPage, "Runtime", 0, 176)
 local espToggleBtn = makeActionButton(espSection, "ESP OFF", 12, 44, 146, THEME.danger)
 local espStatus = makeStatusLabel(espSection, 172, 52, 300)
 local trackerToggleBtn = makeActionButton(espSection, "Tracker ESP OFF", 12, 86, 146, THEME.danger)
-local trackerConfigBtn = makeActionButton(espSection, "âš™", 172, 86, 64, THEME.panelAlt)
+local trackerConfigBtn = makeActionButton(espSection, "CFG", 172, 86, 64, THEME.panelAlt)
 local trackerStatus = makeStatusLabel(espSection, 248, 94, 260)
 trackerStatus.Text = "Whitelist-only tracker is off."
 local espInfo = makeStatusLabel(espSection, 12, 134, 450)
@@ -2444,11 +2445,33 @@ connect(resetPathBtn.MouseButton1Click, function()
     setStatus(profilesStatus, "Profile key: " .. tostring(player.UserId) .. "_data", THEME.muted)
 end)
 
-for _, descendant in ipairs(chunksFolder:GetDescendants()) do
-    registerPart(descendant)
+local function bindChunksFolder(folder)
+    if destroyed or not folder or boundChunksFolder == folder then
+        return
+    end
+
+    chunksFolder = folder
+    boundChunksFolder = folder
+
+    for _, descendant in ipairs(folder:GetDescendants()) do
+        registerPart(descendant)
+    end
+
+    connect(folder.DescendantAdded, function(descendant)
+        registerPart(descendant)
+    end)
+    connect(folder.DescendantRemoving, function(descendant)
+        unregisterPart(descendant)
+    end)
+    requestTargetRefresh()
 end
-connect(chunksFolder.DescendantAdded, function(descendant) registerPart(descendant) end)
-connect(chunksFolder.DescendantRemoving, function(descendant) unregisterPart(descendant) end)
+
+bindChunksFolder(chunksFolder)
+connect(workspace.ChildAdded, function(child)
+    if child.Name == "Chunks" then
+        bindChunksFolder(child)
+    end
+end)
 
 connect(RunService.Heartbeat, function(deltaTime)
     local rebuiltTargets = false
@@ -2494,7 +2517,18 @@ local function playIntro()
     captureGuiTransparency()
 end
 
-fetchVersion()
+local function forceOpenMainGui()
+    mainFrame.Position = FINAL_POSITION
+    mainFrame.Size = FINAL_SIZE
+    sidebar.Visible = true
+    contentFrame.Visible = true
+    sidebar.Position = UDim2.new(0, 12, 0, 12)
+    contentFrame.Position = UDim2.new(0, 197, 0, 12)
+    introTitle.Visible = false
+    introLine.Visible = false
+    captureGuiTransparency()
+end
+
 sidebarVersion.Text = APP_VERSION .. " | By OverStacked-Dev"
 updateStatusPill()
 updateEspPill()
@@ -2506,4 +2540,14 @@ applyGuiSettings()
 refreshAllAppearances()
 showPage("esp")
 captureGuiTransparency()
-task.spawn(playIntro)
+task.spawn(function()
+    fetchVersion()
+    sidebarVersion.Text = APP_VERSION .. " | By OverStacked-Dev"
+end)
+task.spawn(function()
+    local ok, err = pcall(playIntro)
+    if not ok then
+        forceOpenMainGui()
+        warn("MagnetoZz intro failed: " .. tostring(err))
+    end
+end)
