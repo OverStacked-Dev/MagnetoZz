@@ -41,7 +41,6 @@ local CONFIG = {
         OreNode = Color3.fromRGB(0, 200, 255),
         Crystal = Color3.fromRGB(180, 0, 255),
     },
-    partThickness = {},
 }
 
 local GUI_SETTINGS = {
@@ -62,7 +61,6 @@ local FINAL_SIZE = UDim2.new(0, 800, 0, 456)
 local FINAL_POSITION = UDim2.new(0.5, 0, 0.5, 0)
 
 local espEnabled = false
-local trackerPlaceholderEnabled = false
 local destroyed = false
 local currentPage = "esp"
 local trackedParts = {}
@@ -284,18 +282,6 @@ local function getColor(partName)
     return CONFIG.partColors[partName] or CONFIG.defaultColor
 end
 
-local function getScreenLineThickness(partName)
-    return CONFIG.partThickness[partName] or CONFIG.screenLineThickness
-end
-
-local function getWorldLineThickness(partName)
-    local thickness = CONFIG.partThickness[partName]
-    if not thickness then
-        return CONFIG.lineThickness
-    end
-    return math.clamp(thickness * 0.04, 0.02, 0.4)
-end
-
 local function createLinePart()
     local line = Instance.new("Part")
     line.Name = "MagnetoLine"
@@ -501,7 +487,7 @@ sidebarTitle.Text = "MagnetoZz"
 sidebarTitle.TextColor3 = THEME.white
 sidebarTitle.TextSize = 22
 sidebarTitle.Font = Enum.Font.GothamBold
-sidebarTitle.TextXAlignment = Enum.TextXAlignment.Center
+sidebarTitle.TextXAlignment = Enum.TextXAlignment.Left
 sidebarTitle.Parent = sidebar
 registerTitleText(sidebarTitle)
 
@@ -517,11 +503,11 @@ local sidebarVersion = Instance.new("TextLabel")
 sidebarVersion.Size = UDim2.new(1, -18, 0, 18)
 sidebarVersion.Position = UDim2.new(0, 9, 0, 52)
 sidebarVersion.BackgroundTransparency = 1
-sidebarVersion.Text = APP_VERSION .. " | By OverStacked-Dev"
+sidebarVersion.Text = APP_VERSION
 sidebarVersion.TextColor3 = THEME.muted
 sidebarVersion.TextSize = 12
 sidebarVersion.Font = Enum.Font.Gotham
-sidebarVersion.TextXAlignment = Enum.TextXAlignment.Center
+sidebarVersion.TextXAlignment = Enum.TextXAlignment.Left
 sidebarVersion.Parent = sidebar
 registerBodyText(sidebarVersion)
 
@@ -846,19 +832,16 @@ local blacklistPage = makePage("blacklist")
 local guiPage = makePage("gui")
 local profilesPage = makePage("profiles")
 
-local espSection = makeSection(espPage, "Runtime", 0, 176)
+local espSection = makeSection(espPage, "Runtime", 0, 126)
 local espToggleBtn = makeActionButton(espSection, "ESP OFF", 12, 44, 146, THEME.danger)
 local espStatus = makeStatusLabel(espSection, 172, 52, 300)
-local trackerToggleBtn = makeActionButton(espSection, "Tracker ESP OFF WIP", 12, 84, 184, THEME.danger)
-local trackerStatus = makeStatusLabel(espSection, 210, 92, 300)
-trackerStatus.Text = "Placeholder only. Tracker ESP is not active yet."
-local espInfo = makeStatusLabel(espSection, 12, 132, 450)
+local espInfo = makeStatusLabel(espSection, 12, 92, 450)
 espInfo.Size = UDim2.new(1, -24, 0, 24)
 espInfo.TextWrapped = true
 espInfo.Text = "Labels stay close to the player and point toward the tracked part."
 espInfo.TextColor3 = THEME.white
 
-local themeSection = makeSection(espPage, "Visual Theme", 192, 134)
+local themeSection = makeSection(espPage, "Visual Theme", 142, 134)
 local lineColorPreview = Instance.new("TextButton")
 lineColorPreview.Size = UDim2.new(0, 64, 0, 64)
 lineColorPreview.Position = UDim2.new(0, 14, 0, 44)
@@ -882,21 +865,19 @@ accentHint.Text = "GUI accent is separate from line color."
 accentHint.TextColor3 = THEME.white
 
 local configTop = makeSection(configPage, "Settings", 0, 118)
-makeLabel(configTop, "Radius", 96, 42, 80)
-local radiusInput = makeInput(configTop, "500", 96, 62, 108)
+makeLabel(configTop, "Radius", 18, 42, 80)
+local radiusInput = makeInput(configTop, "500", 18, 62, 108)
 radiusInput.Text = tostring(CONFIG.radius)
-local defaultColorLabel = makeLabel(configTop, "Default Color", 148, 42, 100)
-defaultColorLabel.Visible = false
+makeLabel(configTop, "Default Color", 148, 42, 100)
 local defaultColorInput = makeInput(configTop, "FFFFFF", 148, 62, 108)
 defaultColorInput.Text = colorToHex(CONFIG.defaultColor)
-defaultColorInput.Visible = false
-makeLabel(configTop, "Label Distance", 244, 42, 110)
-local labelDistanceInput = makeInput(configTop, "6", 244, 62, 108)
+makeLabel(configTop, "Label Distance", 278, 42, 110)
+local labelDistanceInput = makeInput(configTop, "6", 278, 62, 108)
 labelDistanceInput.Text = tostring(CONFIG.labelDistance)
-local applyBtn = makeActionButton(configTop, "Apply", 392, 62, 92, THEME.accent)
+local applyBtn = makeActionButton(configTop, "Apply", 410, 62, 92, THEME.accent)
 local applyStatus = makeStatusLabel(configTop, 18, 98, 360)
 
-local partColorSection = makeSection(configPage, "Manual Tracer Settings", 134, 202)
+local partColorSection = makeSection(configPage, "Per Part Colors", 134, 184)
 local partColorList = Instance.new("ScrollingFrame")
 partColorList.Size = UDim2.new(1, -24, 0, 104)
 partColorList.Position = UDim2.new(0, 12, 0, 42)
@@ -910,14 +891,12 @@ addStroke(partColorList, THEME.border, 2)
 local partColorLayout = Instance.new("UIListLayout")
 partColorLayout.Padding = UDim.new(0, 6)
 partColorLayout.Parent = partColorList
-local addNameInput = makeInput(partColorSection, "Ore Name", 51, 150, 145)
-local addColorInput = makeInput(partColorSection, "Color", 206, 150, 90)
-local addThicknessInput = makeInput(partColorSection, "Thickness", 306, 150, 92)
-addThicknessInput.Text = tostring(CONFIG.screenLineThickness)
-local addColorBtn = makeActionButton(partColorSection, "Add Tracer", 410, 150, 110, THEME.success)
-local partColorStatus = makeStatusLabel(partColorSection, 51, 184, 430)
+local addNameInput = makeInput(partColorSection, "Part name", 12, 150, 170)
+local addColorInput = makeInput(partColorSection, "HEX", 192, 150, 90)
+local addColorBtn = makeActionButton(partColorSection, "Add Color", 292, 150, 102, THEME.success)
+local partColorStatus = makeStatusLabel(partColorSection, 12, 166, 390)
 
-local blacklistSection = makeSection(blacklistPage, "Ignored Ores", 0, 320)
+local blacklistSection = makeSection(blacklistPage, "Ignored Parts", 0, 320)
 local blacklistList = Instance.new("ScrollingFrame")
 blacklistList.Size = UDim2.new(1, -24, 0, 194)
 blacklistList.Position = UDim2.new(0, 12, 0, 42)
@@ -931,8 +910,8 @@ addStroke(blacklistList, THEME.border, 2)
 local blacklistLayout = Instance.new("UIListLayout")
 blacklistLayout.Padding = UDim.new(0, 6)
 blacklistLayout.Parent = blacklistList
-local blacklistInput = makeInput(blacklistSection, "Ore to ignore", 127, 246, 220)
-local addBlacklistBtn = makeActionButton(blacklistSection, "Add", 357, 246, 86, THEME.success)
+local blacklistInput = makeInput(blacklistSection, "Part to ignore", 12, 246, 220)
+local addBlacklistBtn = makeActionButton(blacklistSection, "Add", 242, 246, 86, THEME.success)
 local blacklistStatus = makeStatusLabel(blacklistSection, 12, 286, 360)
 
 local guiMainSection = makeSection(guiPage, "Gui Settings", 0, 190)
@@ -1013,58 +992,11 @@ lineColorPromptCancel.ZIndex = 21
 local lineColorPromptStatus = makeStatusLabel(lineColorPrompt, 18, 132, 250)
 lineColorPromptStatus.ZIndex = 21
 
-local tracerEditPrompt = Instance.new("Frame")
-tracerEditPrompt.Size = UDim2.new(0, 350, 0, 228)
-tracerEditPrompt.AnchorPoint = Vector2.new(0.5, 0.5)
-tracerEditPrompt.Position = UDim2.new(0.5, 0, 0.5, 0)
-tracerEditPrompt.BackgroundColor3 = THEME.panel
-tracerEditPrompt.BorderSizePixel = 0
-tracerEditPrompt.Visible = false
-tracerEditPrompt.ZIndex = 20
-tracerEditPrompt.Parent = mainFrame
-addCorner(tracerEditPrompt, 16)
-addStroke(tracerEditPrompt, THEME.border, 2)
-local tracerEditScale = Instance.new("UIScale")
-tracerEditScale.Name = "PromptScale"
-tracerEditScale.Scale = 1
-tracerEditScale.Parent = tracerEditPrompt
-
-local tracerEditTitle = makeStatusLabel(tracerEditPrompt, 18, 14, 260)
-tracerEditTitle.Text = "Edit Tracer"
-tracerEditTitle.TextColor3 = THEME.white
-tracerEditTitle.TextSize = 18
-tracerEditTitle.Font = Enum.Font.GothamBold
-tracerEditTitle.ZIndex = 21
-
-local tracerEditNameLabel = makeLabel(tracerEditPrompt, "Ore Name", 18, 48, 100)
-tracerEditNameLabel.ZIndex = 21
-local tracerEditNameInput = makeInput(tracerEditPrompt, "Ore Name", 18, 68, 140)
-tracerEditNameInput.ZIndex = 21
-local tracerEditColorLabel = makeLabel(tracerEditPrompt, "Color", 174, 48, 80)
-tracerEditColorLabel.ZIndex = 21
-local tracerEditColorInput = makeInput(tracerEditPrompt, "Color", 174, 68, 70)
-tracerEditColorInput.ZIndex = 21
-local tracerEditThicknessLabel = makeLabel(tracerEditPrompt, "Thickness", 260, 48, 80)
-tracerEditThicknessLabel.ZIndex = 21
-local tracerEditThicknessInput = makeInput(tracerEditPrompt, "Thickness", 260, 68, 70)
-tracerEditThicknessInput.ZIndex = 21
-
-local tracerSaveBtn = makeActionButton(tracerEditPrompt, "Save", 18, 120, 74, THEME.success)
-tracerSaveBtn.ZIndex = 21
-local tracerCancelBtn = makeActionButton(tracerEditPrompt, "Cancel", 104, 120, 82, THEME.panelAlt)
-tracerCancelBtn.ZIndex = 21
-local tracerDeleteBtn = makeActionButton(tracerEditPrompt, "Delete", 198, 120, 82, THEME.danger)
-tracerDeleteBtn.ZIndex = 21
-local tracerEditStatus = makeStatusLabel(tracerEditPrompt, 18, 170, 310)
-tracerEditStatus.ZIndex = 21
-
 local partColorRows = {}
 local blacklistRows = {}
-local selectedTracerName = nil
 local refreshAllAppearances
 local rebuildPartColorList
 local rebuildBlacklistList
-local openTracerEditPrompt
 
 local function refreshUiInputs()
     radiusInput.Text = tostring(CONFIG.radius)
@@ -1118,7 +1050,6 @@ local function applyGuiSettings()
 
     accentName.TextSize = math.max(16, GUI_SETTINGS.bodyTextSize + 4)
     promptTitle.TextSize = math.max(18, GUI_SETTINGS.bodyTextSize + 6)
-    tracerEditTitle.TextSize = math.max(18, GUI_SETTINGS.bodyTextSize + 6)
     applyBtn.BackgroundColor3 = GUI_SETTINGS.accentColor
     guiApplyBtn.BackgroundColor3 = GUI_SETTINGS.accentColor
     lineColorPromptApply.BackgroundColor3 = GUI_SETTINGS.accentColor
@@ -1152,21 +1083,11 @@ local function applyConfigPayload(payload)
     end
     if typeof(payload.partColors) == "table" then
         CONFIG.partColors = {}
-        CONFIG.partThickness = {}
-        for partName, tracerData in pairs(payload.partColors) do
-            if typeof(partName) == "string" and typeof(tracerData) == "string" then
-                local loadedColor = colorFromHex(tracerData)
+        for partName, hex in pairs(payload.partColors) do
+            if typeof(partName) == "string" and typeof(hex) == "string" then
+                local loadedColor = colorFromHex(hex)
                 if loadedColor then
                     CONFIG.partColors[partName] = loadedColor
-                end
-            elseif typeof(partName) == "string" and typeof(tracerData) == "table" then
-                local loadedColor = colorFromHex(tracerData.color)
-                local thickness = tonumber(tracerData.thickness)
-                if loadedColor then
-                    CONFIG.partColors[partName] = loadedColor
-                end
-                if thickness then
-                    CONFIG.partThickness[partName] = math.clamp(thickness, 0.5, 12)
                 end
             end
         end
@@ -1253,10 +1174,7 @@ end
 local function buildPartColorPayload()
     local payload = {}
     for partName, color in pairs(CONFIG.partColors) do
-        payload[partName] = {
-            color = colorToHex(color),
-            thickness = getScreenLineThickness(partName),
-        }
+        payload[partName] = colorToHex(color)
     end
     return payload
 end
@@ -1319,7 +1237,7 @@ local function saveConfig()
         end
     end
 
-    return true, "Saved profile to Supabase."
+    return true, "Saved config + blacklist to Supabase."
 end
 
 local function loadConfig()
@@ -1354,21 +1272,11 @@ local function loadConfig()
         end
         if typeof(config.part_colors) == "table" then
             CONFIG.partColors = {}
-            CONFIG.partThickness = {}
-            for partName, tracerData in pairs(config.part_colors) do
-                if typeof(partName) == "string" and typeof(tracerData) == "string" then
-                    local loadedColor = colorFromHex(tracerData)
+            for partName, hex in pairs(config.part_colors) do
+                if typeof(partName) == "string" and typeof(hex) == "string" then
+                    local loadedColor = colorFromHex(hex)
                     if loadedColor then
                         CONFIG.partColors[partName] = loadedColor
-                    end
-                elseif typeof(partName) == "string" and typeof(tracerData) == "table" then
-                    local loadedColor = colorFromHex(tracerData.color)
-                    local thickness = tonumber(tracerData.thickness)
-                    if loadedColor then
-                        CONFIG.partColors[partName] = loadedColor
-                    end
-                    if thickness then
-                        CONFIG.partThickness[partName] = math.clamp(thickness, 0.5, 12)
                     end
                 end
             end
@@ -1476,7 +1384,7 @@ local function refreshEntryAppearance(entry)
     local color = getColor(entry.part.Name)
     if entry.drawLine then
         entry.drawLine.Color = color
-        entry.drawLine.Thickness = getScreenLineThickness(entry.part.Name)
+        entry.drawLine.Thickness = CONFIG.screenLineThickness
     end
     if entry.drawText then
         entry.drawText.Text = entry.part.Name
@@ -1629,8 +1537,7 @@ local function updateEntry(entry, playerPos)
 
     local midpoint = fromPos + direction / 2
     local labelOffset = math.min(CONFIG.labelDistance, math.max(2, distance * 0.25))
-    local worldThickness = getWorldLineThickness(part.Name)
-    entry.line.Size = Vector3.new(worldThickness, worldThickness, distance)
+    entry.line.Size = Vector3.new(CONFIG.lineThickness, CONFIG.lineThickness, distance)
     entry.line.CFrame = CFrame.lookAt(midpoint, toPos)
     entry.anchor.CFrame = CFrame.new(fromPos + direction.Unit * labelOffset)
     setEntryVisible(entry, true)
@@ -1761,17 +1668,14 @@ rebuildPartColorList = function()
     end
     table.clear(partColorRows)
     for partName, color in pairs(CONFIG.partColors) do
-        local row = Instance.new("TextButton")
+        local row = Instance.new("Frame")
         row.Size = UDim2.new(1, -10, 0, 30)
-        row.AutoButtonColor = false
         row.BackgroundColor3 = THEME.panel
         row.BorderSizePixel = 0
-        row.Text = ""
         row.Parent = partColorList
         addCorner(row, 10)
         addStroke(row, THEME.border, 2)
-        enableButtonMotion(row, 1.01, 0.98)
-        local nameLabel = makeStatusLabel(row, 8, 6, 170)
+        local nameLabel = makeStatusLabel(row, 8, 6, 185)
         nameLabel.Text = partName
         nameLabel.TextColor3 = THEME.white
         local swatch = Instance.new("Frame")
@@ -1783,13 +1687,25 @@ rebuildPartColorList = function()
         addCorner(swatch, 6)
         local hexLabel = makeStatusLabel(row, 230, 6, 78)
         hexLabel.Text = "#" .. colorToHex(color)
-        local thicknessLabel = makeStatusLabel(row, 318, 6, 92)
-        thicknessLabel.Text = "T " .. tostring(getScreenLineThickness(partName))
-        thicknessLabel.TextColor3 = THEME.white
-        connect(row.MouseButton1Click, function()
-            if openTracerEditPrompt then
-                openTracerEditPrompt(partName)
-            end
+        local removeBtn = Instance.new("TextButton")
+        removeBtn.Size = UDim2.new(0, 26, 0, 22)
+        removeBtn.Position = UDim2.new(1, -34, 0.5, -11)
+        removeBtn.AutoButtonColor = false
+        removeBtn.BackgroundColor3 = THEME.danger
+        removeBtn.BorderSizePixel = 0
+        removeBtn.Text = "X"
+        removeBtn.TextColor3 = THEME.white
+        removeBtn.TextSize = 12
+        removeBtn.Font = Enum.Font.GothamBold
+        removeBtn.Parent = row
+        addCorner(removeBtn, 8)
+        addStroke(removeBtn, Color3.fromRGB(160, 25, 25), 2)
+        enableButtonMotion(removeBtn, 1.04, 0.94)
+        connect(removeBtn.MouseButton1Click, function()
+            CONFIG.partColors[partName] = nil
+            rebuildPartColorList()
+            refreshAllAppearances()
+            setStatus(partColorStatus, "Removed color for " .. partName, THEME.muted)
         end)
         table.insert(partColorRows, row)
     end
@@ -1857,14 +1773,14 @@ local function showPage(pageName)
         page.Visible = name == pageName
     end
     if pageName == "esp" then
-        contentTitle.Text = "Main"
-        contentSubtitle.Text = "Fast line renderer with quick runtime controls."
+        contentTitle.Text = "ESP"
+        contentSubtitle.Text = "Fast line renderer. Duplicate ores collapse to the closest match."
     elseif pageName == "config" then
-        contentTitle.Text = "ESP Config"
-        contentSubtitle.Text = "Tune range, label spacing, and Manual Tracer Settings."
+        contentTitle.Text = "Config"
+        contentSubtitle.Text = "Radius, label distance, default color, and part overrides."
     elseif pageName == "blacklist" then
         contentTitle.Text = "Blacklist"
-        contentSubtitle.Text = "Hide ores you do not want MagnetoZz to trace."
+        contentSubtitle.Text = "Ignore unwanted parts without rebuilding the cache."
     elseif pageName == "gui" then
         contentTitle.Text = "Gui Settings"
         contentSubtitle.Text = "Menu accent, text sizes, and interface animations."
@@ -1896,8 +1812,8 @@ local function shutdown()
     pcall(function() script:Destroy() end)
 end
 
-makePageButton("esp", "Main", 1)
-makePageButton("config", "ESP Config", 2)
+makePageButton("esp", "ESP", 1)
+makePageButton("config", "Config", 2)
 makePageButton("blacklist", "Blacklist", 3)
 makePageButton("gui", "Gui Settings", 4)
 makePageButton("profiles", "Profiles", 5)
@@ -1938,76 +1854,6 @@ connect(lineColorPromptApply.MouseButton1Click, function()
     CONFIG.defaultColor = loadedColor
     refreshAllAppearances()
     closeLineColorPrompt()
-end)
-
-openTracerEditPrompt = function(oreName)
-    local color = CONFIG.partColors[oreName]
-    selectedTracerName = oreName
-    tracerEditTitle.Text = "Edit " .. oreName
-    tracerEditNameInput.Text = oreName
-    tracerEditColorInput.Text = color and colorToHex(color) or colorToHex(CONFIG.defaultColor)
-    tracerEditThicknessInput.Text = tostring(getScreenLineThickness(oreName))
-    tracerEditStatus.Text = ""
-    tracerEditPrompt.Visible = true
-    if GUI_SETTINGS.animationsEnabled then
-        local promptScale = tracerEditPrompt:FindFirstChild("PromptScale")
-        if promptScale then
-            promptScale.Scale = 0.92
-            tween(promptScale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
-        end
-    end
-end
-
-local function closeTracerEditPrompt()
-    tracerEditPrompt.Visible = false
-    selectedTracerName = nil
-end
-
-connect(tracerCancelBtn.MouseButton1Click, closeTracerEditPrompt)
-connect(tracerDeleteBtn.MouseButton1Click, function()
-    if not selectedTracerName then
-        return
-    end
-    local deletedName = selectedTracerName
-    CONFIG.partColors[deletedName] = nil
-    CONFIG.partThickness[deletedName] = nil
-    rebuildPartColorList()
-    refreshAllAppearances()
-    setStatus(partColorStatus, "Deleted tracer for " .. deletedName, THEME.muted)
-    closeTracerEditPrompt()
-end)
-connect(tracerSaveBtn.MouseButton1Click, function()
-    if not selectedTracerName then
-        return
-    end
-
-    local newName = trim(tracerEditNameInput.Text)
-    local loadedColor = colorFromHex(tracerEditColorInput.Text)
-    local thickness = tonumber(trim(tracerEditThicknessInput.Text))
-
-    if newName == "" then
-        setStatus(tracerEditStatus, "Ore name required.", THEME.danger)
-        return
-    end
-    if not loadedColor then
-        setStatus(tracerEditStatus, "Color HEX is invalid.", THEME.danger)
-        return
-    end
-    if not thickness then
-        setStatus(tracerEditStatus, "Thickness must be a number.", THEME.danger)
-        return
-    end
-
-    thickness = math.clamp(thickness, 0.5, 12)
-    CONFIG.partColors[selectedTracerName] = nil
-    CONFIG.partThickness[selectedTracerName] = nil
-    CONFIG.partColors[newName] = loadedColor
-    CONFIG.partThickness[newName] = thickness
-    rebuildPartColorList()
-    refreshAllAppearances()
-    requestTargetRefresh()
-    setStatus(partColorStatus, "Updated tracer for " .. newName, THEME.success)
-    closeTracerEditPrompt()
 end)
 
 connect(dragHandle.InputBegan, function(input)
@@ -2057,16 +1903,10 @@ connect(espToggleBtn.MouseButton1Click, function()
     setEspState(not espEnabled)
 end)
 
-connect(trackerToggleBtn.MouseButton1Click, function()
-    trackerPlaceholderEnabled = not trackerPlaceholderEnabled
-    trackerToggleBtn.Text = trackerPlaceholderEnabled and "Tracker ESP ON WIP" or "Tracker ESP OFF WIP"
-    trackerToggleBtn.BackgroundColor3 = trackerPlaceholderEnabled and THEME.success or THEME.danger
-    setStatus(trackerStatus, "WIP placeholder only. No tracker rendering yet.", THEME.muted)
-end)
-
 connect(applyBtn.MouseButton1Click, function()
     local radius = tonumber(trim(radiusInput.Text))
     local labelDistance = tonumber(trim(labelDistanceInput.Text))
+    local loadedColor = colorFromHex(defaultColorInput.Text)
     if radius then
         CONFIG.radius = math.max(0, radius)
         radiusInput.Text = tostring(CONFIG.radius)
@@ -2074,6 +1914,10 @@ connect(applyBtn.MouseButton1Click, function()
     if labelDistance then
         CONFIG.labelDistance = math.max(2, labelDistance)
         labelDistanceInput.Text = tostring(CONFIG.labelDistance)
+    end
+    if loadedColor then
+        CONFIG.defaultColor = loadedColor
+        defaultColorInput.Text = colorToHex(loadedColor)
     end
     requestTargetRefresh()
     refreshAllAppearances()
@@ -2135,33 +1979,26 @@ end)
 connect(addColorBtn.MouseButton1Click, function()
     local partName = trim(addNameInput.Text)
     local loadedColor = colorFromHex(addColorInput.Text)
-    local thickness = tonumber(trim(addThicknessInput.Text))
     if partName == "" then
-        setStatus(partColorStatus, "Ore name required.", THEME.danger)
+        setStatus(partColorStatus, "Part name required.", THEME.danger)
         return
     end
     if not loadedColor then
-        setStatus(partColorStatus, "Color HEX is invalid.", THEME.danger)
-        return
-    end
-    if not thickness then
-        setStatus(partColorStatus, "Thickness must be a number.", THEME.danger)
+        setStatus(partColorStatus, "Hex color invalid.", THEME.danger)
         return
     end
     CONFIG.partColors[partName] = loadedColor
-    CONFIG.partThickness[partName] = math.clamp(thickness, 0.5, 12)
     addNameInput.Text = ""
     addColorInput.Text = ""
-    addThicknessInput.Text = tostring(CONFIG.screenLineThickness)
     rebuildPartColorList()
     refreshAllAppearances()
-    setStatus(partColorStatus, "Tracer saved for " .. partName, THEME.success)
+    setStatus(partColorStatus, "Color saved for " .. partName, THEME.success)
 end)
 
 connect(addBlacklistBtn.MouseButton1Click, function()
     local partName = trim(blacklistInput.Text)
     if partName == "" then
-        setStatus(blacklistStatus, "Ore name required.", THEME.danger)
+        setStatus(blacklistStatus, "Part name required.", THEME.danger)
         return
     end
     if addToIgnore(partName) then
@@ -2242,7 +2079,7 @@ local function playIntro()
 end
 
 fetchVersion()
-sidebarVersion.Text = APP_VERSION .. " | By OverStacked-Dev"
+sidebarVersion.Text = APP_VERSION
 updateStatusPill()
 updateEspPill()
 rebuildPartColorList()
