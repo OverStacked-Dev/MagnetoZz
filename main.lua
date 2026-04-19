@@ -6,7 +6,7 @@ local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
-local chunksFolder = workspace:FindFirstChild("Chunks")
+local chunksFolder = workspace:WaitForChild("Chunks")
 
 local THEME = {
     accent = Color3.fromRGB(72, 100, 255),
@@ -36,7 +36,6 @@ local CONFIG = {
     maxVisible = 60,
     closestPerName = true,
     showLabels = true,
-    trackerWhitelist = {},
     defaultColor = Color3.fromRGB(255, 255, 255),
     partColors = {
         OreNode = Color3.fromRGB(0, 200, 255),
@@ -60,14 +59,11 @@ local FINAL_SIZE = UDim2.new(0, 800, 0, 456)
 local FINAL_POSITION = UDim2.new(0.5, 0, 0.5, 0)
 
 local espEnabled = false
-local trackerEnabled = false
 local destroyed = false
 local currentPage = "esp"
 local trackedParts = {}
 local activeEntries = {}
-local trackerActiveEntries = {}
 local connections = {}
-local chunksBound = false
 local heartbeatAccumulator = 0
 local targetRefreshAccumulator = 999
 local pageButtons = {}
@@ -280,30 +276,6 @@ local function removeFromIgnore(partName)
     return true
 end
 
-local function isTrackerWhitelisted(partName)
-    return table.find(CONFIG.trackerWhitelist, partName) ~= nil
-end
-
-local function addToTrackerWhitelist(partName)
-    partName = trim(partName)
-    if partName == "" or isTrackerWhitelisted(partName) then
-        return false
-    end
-    table.insert(CONFIG.trackerWhitelist, partName)
-    requestTargetRefresh()
-    return true
-end
-
-local function removeFromTrackerWhitelist(partName)
-    local index = table.find(CONFIG.trackerWhitelist, partName)
-    if not index then
-        return false
-    end
-    table.remove(CONFIG.trackerWhitelist, index)
-    requestTargetRefresh()
-    return true
-end
-
 local function getColor(partName)
     return CONFIG.partColors[partName] or CONFIG.defaultColor
 end
@@ -397,7 +369,6 @@ screenGui.Name = "MagnetoZzGui"
 screenGui.ResetOnSpawn = false
 screenGui.IgnoreGuiInset = true
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-screenGui.DisplayOrder = 999999
 screenGui.Parent = playerGui
 
 local function makeTopPill(x, text)
@@ -859,20 +830,16 @@ local blacklistPage = makePage("blacklist")
 local guiPage = makePage("gui")
 local profilesPage = makePage("profiles")
 
-local espSection = makeSection(espPage, "Runtime", 0, 176)
+local espSection = makeSection(espPage, "Runtime", 0, 126)
 local espToggleBtn = makeActionButton(espSection, "ESP OFF", 12, 44, 146, THEME.danger)
 local espStatus = makeStatusLabel(espSection, 172, 52, 300)
-local trackerToggleBtn = makeActionButton(espSection, "Tracker OFF", 12, 86, 146, THEME.danger)
-local trackerGearBtn = makeActionButton(espSection, "Gear", 172, 86, 64, THEME.panelAlt)
-local trackerStatus = makeStatusLabel(espSection, 248, 94, 260)
-trackerStatus.Text = "Whitelist-only ESP is off."
-local espInfo = makeStatusLabel(espSection, 12, 134, 450)
+local espInfo = makeStatusLabel(espSection, 12, 92, 450)
 espInfo.Size = UDim2.new(1, -24, 0, 24)
 espInfo.TextWrapped = true
-espInfo.Text = "Normal ESP and Tracker ESP are separate, but share radius, labels, colors, and closest-target rendering."
+espInfo.Text = "Labels stay close to the player and point toward the tracked part."
 espInfo.TextColor3 = THEME.white
 
-local themeSection = makeSection(espPage, "Visual Theme", 192, 134)
+local themeSection = makeSection(espPage, "Visual Theme", 142, 134)
 local lineColorPreview = Instance.new("TextButton")
 lineColorPreview.Size = UDim2.new(0, 64, 0, 64)
 lineColorPreview.Position = UDim2.new(0, 14, 0, 44)
@@ -1023,63 +990,8 @@ lineColorPromptCancel.ZIndex = 21
 local lineColorPromptStatus = makeStatusLabel(lineColorPrompt, 18, 132, 250)
 lineColorPromptStatus.ZIndex = 21
 
-local trackerPrompt = Instance.new("Frame")
-trackerPrompt.Size = UDim2.new(0, 380, 0, 286)
-trackerPrompt.AnchorPoint = Vector2.new(0.5, 0.5)
-trackerPrompt.Position = UDim2.new(0.5, 0, 0.5, 0)
-trackerPrompt.BackgroundColor3 = THEME.panel
-trackerPrompt.BorderSizePixel = 0
-trackerPrompt.Visible = false
-trackerPrompt.ZIndex = 20
-trackerPrompt.Parent = mainFrame
-addCorner(trackerPrompt, 16)
-addStroke(trackerPrompt, THEME.border, 2)
-local trackerPromptScale = Instance.new("UIScale")
-trackerPromptScale.Name = "PromptScale"
-trackerPromptScale.Scale = 1
-trackerPromptScale.Parent = trackerPrompt
-
-local trackerPromptTitle = makeStatusLabel(trackerPrompt, 18, 14, 250)
-trackerPromptTitle.Text = "Tracker Whitelist"
-trackerPromptTitle.TextColor3 = THEME.white
-trackerPromptTitle.TextSize = 18
-trackerPromptTitle.Font = Enum.Font.GothamBold
-trackerPromptTitle.ZIndex = 21
-
-local trackerPromptHint = makeStatusLabel(trackerPrompt, 18, 42, 330)
-trackerPromptHint.Size = UDim2.new(1, -36, 0, 34)
-trackerPromptHint.TextWrapped = true
-trackerPromptHint.Text = "Tracker ESP only renders names from this list. Use exact part names."
-trackerPromptHint.TextColor3 = THEME.white
-trackerPromptHint.ZIndex = 21
-
-local trackerList = Instance.new("ScrollingFrame")
-trackerList.Size = UDim2.new(1, -36, 0, 126)
-trackerList.Position = UDim2.new(0, 18, 0, 84)
-trackerList.BackgroundColor3 = THEME.panelAlt
-trackerList.BorderSizePixel = 0
-trackerList.ScrollBarThickness = 4
-trackerList.CanvasSize = UDim2.new(0, 0, 0, 0)
-trackerList.ZIndex = 21
-trackerList.Parent = trackerPrompt
-addCorner(trackerList, 12)
-addStroke(trackerList, THEME.border, 2)
-local trackerLayout = Instance.new("UIListLayout")
-trackerLayout.Padding = UDim.new(0, 6)
-trackerLayout.Parent = trackerList
-
-local trackerInput = makeInput(trackerPrompt, "Part name to track", 18, 224, 182)
-trackerInput.ZIndex = 21
-local trackerAddBtn = makeActionButton(trackerPrompt, "Add", 210, 224, 64, THEME.success)
-trackerAddBtn.ZIndex = 21
-local trackerCloseBtn = makeActionButton(trackerPrompt, "Close", 286, 224, 74, THEME.panelAlt)
-trackerCloseBtn.ZIndex = 21
-local trackerPromptStatus = makeStatusLabel(trackerPrompt, 18, 262, 330)
-trackerPromptStatus.ZIndex = 21
-
 local partColorRows = {}
 local blacklistRows = {}
-local trackerRows = {}
 
 local function refreshUiInputs()
     radiusInput.Text = tostring(CONFIG.radius)
@@ -1133,7 +1045,6 @@ local function applyGuiSettings()
 
     accentName.TextSize = math.max(16, GUI_SETTINGS.bodyTextSize + 4)
     promptTitle.TextSize = math.max(18, GUI_SETTINGS.bodyTextSize + 6)
-    trackerPromptTitle.TextSize = math.max(18, GUI_SETTINGS.bodyTextSize + 6)
     applyBtn.BackgroundColor3 = GUI_SETTINGS.accentColor
     guiApplyBtn.BackgroundColor3 = GUI_SETTINGS.accentColor
     lineColorPromptApply.BackgroundColor3 = GUI_SETTINGS.accentColor
@@ -1162,14 +1073,6 @@ local function applyConfigPayload(payload)
         for _, partName in ipairs(payload.ignore) do
             if typeof(partName) == "string" and trim(partName) ~= "" then
                 table.insert(CONFIG.ignore, trim(partName))
-            end
-        end
-    end
-    if typeof(payload.trackerWhitelist) == "table" then
-        CONFIG.trackerWhitelist = {}
-        for _, partName in ipairs(payload.trackerWhitelist) do
-            if typeof(partName) == "string" and trim(partName) ~= "" then
-                table.insert(CONFIG.trackerWhitelist, trim(partName))
             end
         end
     end
@@ -1338,7 +1241,6 @@ end
 
 local function clearActiveEntries()
     table.clear(activeEntries)
-    table.clear(trackerActiveEntries)
 end
 
 local function unregisterPart(part)
@@ -1370,39 +1272,10 @@ local function setEspState(enabled)
     else
         espToggleBtn.Text = "ESP OFF"
         espToggleBtn.BackgroundColor3 = THEME.danger
-        setStatus(espStatus, "Normal ESP disabled.", THEME.muted)
-        table.clear(activeEntries)
-        if trackerEnabled then
-            requestTargetRefresh()
-        else
-            hideAllEntries()
-        end
+        setStatus(espStatus, "ESP disabled. All lines hidden.", THEME.muted)
+        hideAllEntries()
     end
     updateEspPill()
-end
-
-local function setTrackerState(enabled)
-    trackerEnabled = enabled
-    if trackerEnabled then
-        trackerToggleBtn.Text = "Tracker ON"
-        trackerToggleBtn.BackgroundColor3 = THEME.success
-        if #CONFIG.trackerWhitelist == 0 then
-            setStatus(trackerStatus, "Tracker on, but whitelist is empty.", THEME.danger)
-        else
-            setStatus(trackerStatus, "Tracking whitelist only.", THEME.white)
-        end
-        requestTargetRefresh()
-    else
-        trackerToggleBtn.Text = "Tracker OFF"
-        trackerToggleBtn.BackgroundColor3 = THEME.danger
-        setStatus(trackerStatus, "Whitelist-only ESP is off.", THEME.muted)
-        table.clear(trackerActiveEntries)
-        if espEnabled then
-            requestTargetRefresh()
-        else
-            hideAllEntries()
-        end
-    end
 end
 
 local function updateEntry(entry, playerPos)
@@ -1458,7 +1331,7 @@ local function updateEntry(entry, playerPos)
 end
 
 local function updateEsp()
-    if destroyed or (not espEnabled and not trackerEnabled) then
+    if destroyed or not espEnabled then
         return
     end
     local character = player.Character
@@ -1472,38 +1345,27 @@ local function updateEsp()
         return
     end
     local playerPos = hrp.Position
-    local updatedEntries = {}
 
-    local function updateList(list, whitelistOnly)
-        for index = #list, 1, -1 do
-            local entry = list[index]
-            local part = entry.part
-            if not part or not part.Parent or isIgnored(part.Name) or (whitelistOnly and not isTrackerWhitelisted(part.Name)) then
-                table.remove(list, index)
+    for index = #activeEntries, 1, -1 do
+        local entry = activeEntries[index]
+        local part = entry.part
+        if not part or not part.Parent or isIgnored(part.Name) then
+            setEntryVisible(entry, false)
+            table.remove(activeEntries, index)
+        else
+            local distance = (part.Position - playerPos).Magnitude
+            if CONFIG.radius ~= 0 and distance > CONFIG.radius then
+                setEntryVisible(entry, false)
+                table.remove(activeEntries, index)
             else
-                local distance = (part.Position - playerPos).Magnitude
-                if CONFIG.radius ~= 0 and distance > CONFIG.radius then
-                    table.remove(list, index)
-                elseif not updatedEntries[entry] then
-                    updatedEntries[entry] = true
-                    updateEntry(entry, playerPos)
-                end
+                updateEntry(entry, playerPos)
             end
         end
-    end
-
-    if espEnabled then
-        updateList(activeEntries, false)
-    end
-
-    if trackerEnabled then
-        updateList(trackerActiveEntries, true)
     end
 end
 
 local function rebuildEspTargets()
-    if destroyed or (not espEnabled and not trackerEnabled) then
-        hideAllEntries()
+    if destroyed or not espEnabled then
         return
     end
 
@@ -1524,27 +1386,7 @@ local function rebuildEspTargets()
     local selectedLookup = {}
     local nearestByName = {}
     local candidates = {}
-    local trackerSelectedEntries = {}
-    local trackerNearestByName = {}
-    local trackerCandidates = {}
     local staleParts = {}
-
-    local function pushCandidate(list, nearestMap, part, entry, distance)
-        if CONFIG.closestPerName then
-            local existing = nearestMap[part.Name]
-            if not existing or distance < existing.distance then
-                nearestMap[part.Name] = {
-                    entry = entry,
-                    distance = distance,
-                }
-            end
-        else
-            table.insert(list, {
-                entry = entry,
-                distance = distance,
-            })
-        end
-    end
 
     for part, entry in pairs(trackedParts) do
         if not part or not part.Parent then
@@ -1556,11 +1398,19 @@ local function rebuildEspTargets()
         else
             local distance = (part.Position - playerPos).Magnitude
             if CONFIG.radius == 0 or distance <= CONFIG.radius then
-                if espEnabled then
-                    pushCandidate(candidates, nearestByName, part, entry, distance)
-                end
-                if trackerEnabled and isTrackerWhitelisted(part.Name) then
-                    pushCandidate(trackerCandidates, trackerNearestByName, part, entry, distance)
+                if CONFIG.closestPerName then
+                    local existing = nearestByName[part.Name]
+                    if not existing or distance < existing.distance then
+                        nearestByName[part.Name] = {
+                            entry = entry,
+                            distance = distance,
+                        }
+                    end
+                else
+                    table.insert(candidates, {
+                        entry = entry,
+                        distance = distance,
+                    })
                 end
             elseif entry.visible then
                 setEntryVisible(entry, false)
@@ -1576,15 +1426,9 @@ local function rebuildEspTargets()
         for _, candidate in pairs(nearestByName) do
             table.insert(candidates, candidate)
         end
-        for _, candidate in pairs(trackerNearestByName) do
-            table.insert(trackerCandidates, candidate)
-        end
     end
 
     table.sort(candidates, function(a, b)
-        return a.distance < b.distance
-    end)
-    table.sort(trackerCandidates, function(a, b)
         return a.distance < b.distance
     end)
 
@@ -1592,12 +1436,6 @@ local function rebuildEspTargets()
     for index = 1, maxVisible do
         local entry = candidates[index].entry
         selectedEntries[index] = entry
-        selectedLookup[entry] = true
-    end
-    local trackerMaxVisible = math.min(CONFIG.maxVisible or #trackerCandidates, #trackerCandidates)
-    for index = 1, trackerMaxVisible do
-        local entry = trackerCandidates[index].entry
-        trackerSelectedEntries[index] = entry
         selectedLookup[entry] = true
     end
 
@@ -1608,7 +1446,6 @@ local function rebuildEspTargets()
     end
 
     activeEntries = selectedEntries
-    trackerActiveEntries = trackerSelectedEntries
     updateEsp()
 end
 
@@ -1704,61 +1541,11 @@ local function rebuildBlacklistList()
     captureGuiTransparency()
 end
 
-local function rebuildTrackerList()
-    for _, row in ipairs(trackerRows) do
-        row:Destroy()
-    end
-    table.clear(trackerRows)
-    for _, partName in ipairs(CONFIG.trackerWhitelist) do
-        local row = Instance.new("Frame")
-        row.Size = UDim2.new(1, -10, 0, 30)
-        row.BackgroundColor3 = THEME.panel
-        row.BorderSizePixel = 0
-        row.ZIndex = 21
-        row.Parent = trackerList
-        addCorner(row, 10)
-        addStroke(row, THEME.border, 2)
-        local nameLabel = makeStatusLabel(row, 8, 6, 230)
-        nameLabel.Text = partName
-        nameLabel.TextColor3 = THEME.white
-        nameLabel.ZIndex = 22
-        local removeBtn = Instance.new("TextButton")
-        removeBtn.Size = UDim2.new(0, 26, 0, 22)
-        removeBtn.Position = UDim2.new(1, -34, 0.5, -11)
-        removeBtn.AutoButtonColor = false
-        removeBtn.BackgroundColor3 = THEME.danger
-        removeBtn.BorderSizePixel = 0
-        removeBtn.Text = "X"
-        removeBtn.TextColor3 = THEME.white
-        removeBtn.TextSize = 12
-        removeBtn.Font = Enum.Font.GothamBold
-        removeBtn.ZIndex = 22
-        removeBtn.Parent = row
-        addCorner(removeBtn, 8)
-        addStroke(removeBtn, Color3.fromRGB(160, 25, 25), 2)
-        enableButtonMotion(removeBtn, 1.04, 0.94)
-        connect(removeBtn.MouseButton1Click, function()
-            removeFromTrackerWhitelist(partName)
-            rebuildTrackerList()
-            if trackerEnabled and #CONFIG.trackerWhitelist == 0 then
-                setStatus(trackerStatus, "Tracker on, but whitelist is empty.", THEME.danger)
-            end
-            setStatus(trackerPromptStatus, "Removed " .. partName, THEME.muted)
-        end)
-        table.insert(trackerRows, row)
-    end
-
-    captureGuiTransparency()
-end
-
 connect(partColorLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
     partColorList.CanvasSize = UDim2.new(0, 0, 0, partColorLayout.AbsoluteContentSize.Y + 8)
 end)
 connect(blacklistLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
     blacklistList.CanvasSize = UDim2.new(0, 0, 0, blacklistLayout.AbsoluteContentSize.Y + 8)
-end)
-connect(trackerLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
-    trackerList.CanvasSize = UDim2.new(0, 0, 0, trackerLayout.AbsoluteContentSize.Y + 8)
 end)
 
 updatePageButtons = function()
@@ -1843,24 +1630,6 @@ local function closeLineColorPrompt()
     lineColorPrompt.Visible = false
 end
 
-local function openTrackerPrompt()
-    trackerPromptStatus.Text = ""
-    trackerPrompt.Visible = true
-    trackerPrompt.ZIndex = 20
-    rebuildTrackerList()
-    if GUI_SETTINGS.animationsEnabled then
-        local promptScale = trackerPrompt:FindFirstChild("PromptScale")
-        if promptScale then
-            promptScale.Scale = 0.92
-            tween(promptScale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
-        end
-    end
-end
-
-local function closeTrackerPrompt()
-    trackerPrompt.Visible = false
-end
-
 connect(lineColorPreview.MouseButton1Click, openLineColorPrompt)
 connect(lineColorPromptCancel.MouseButton1Click, closeLineColorPrompt)
 connect(lineColorPromptApply.MouseButton1Click, function()
@@ -1872,29 +1641,6 @@ connect(lineColorPromptApply.MouseButton1Click, function()
     CONFIG.defaultColor = loadedColor
     refreshAllAppearances()
     closeLineColorPrompt()
-end)
-
-connect(trackerGearBtn.MouseButton1Click, openTrackerPrompt)
-connect(trackerCloseBtn.MouseButton1Click, closeTrackerPrompt)
-connect(trackerToggleBtn.MouseButton1Click, function()
-    setTrackerState(not trackerEnabled)
-end)
-connect(trackerAddBtn.MouseButton1Click, function()
-    local partName = trim(trackerInput.Text)
-    if partName == "" then
-        setStatus(trackerPromptStatus, "Part name required.", THEME.danger)
-        return
-    end
-    if addToTrackerWhitelist(partName) then
-        trackerInput.Text = ""
-        rebuildTrackerList()
-        if trackerEnabled then
-            setStatus(trackerStatus, "Tracking whitelist only.", THEME.white)
-        end
-        setStatus(trackerPromptStatus, "Added " .. partName, THEME.success)
-    else
-        setStatus(trackerPromptStatus, partName .. " is already tracked.", THEME.muted)
-    end
 end)
 
 connect(dragHandle.InputBegan, function(input)
@@ -2061,31 +1807,11 @@ connect(resetPathBtn.MouseButton1Click, function()
     setStatus(profilesStatus, "We'll wire this back in later.", THEME.muted)
 end)
 
-local function bindChunksFolder(folder)
-    if destroyed or chunksBound or not folder then
-        return
-    end
-
-    chunksFolder = folder
-    chunksBound = true
-    for _, descendant in ipairs(chunksFolder:GetDescendants()) do
-        registerPart(descendant)
-    end
-    connect(chunksFolder.DescendantAdded, function(descendant) registerPart(descendant) end)
-    connect(chunksFolder.DescendantRemoving, function(descendant) unregisterPart(descendant) end)
-    requestTargetRefresh()
+for _, descendant in ipairs(chunksFolder:GetDescendants()) do
+    registerPart(descendant)
 end
-
-if chunksFolder then
-    bindChunksFolder(chunksFolder)
-else
-    setStatus(espStatus, "Waiting for workspace.Chunks...", THEME.muted)
-    connect(workspace.ChildAdded, function(child)
-        if child.Name == "Chunks" then
-            bindChunksFolder(child)
-        end
-    end)
-end
+connect(chunksFolder.DescendantAdded, function(descendant) registerPart(descendant) end)
+connect(chunksFolder.DescendantRemoving, function(descendant) unregisterPart(descendant) end)
 
 connect(RunService.Heartbeat, function(deltaTime)
     local rebuiltTargets = false
@@ -2110,18 +1836,6 @@ connect(RunService.Heartbeat, function(deltaTime)
     updateEsp()
 end)
 
-local function forceOpenMainGui()
-    mainFrame.Position = FINAL_POSITION
-    mainFrame.Size = FINAL_SIZE
-    sidebar.Visible = true
-    sidebar.Position = UDim2.new(0, 12, 0, 12)
-    contentFrame.Visible = true
-    contentFrame.Position = UDim2.new(0, 197, 0, 12)
-    introTitle.Visible = false
-    introLine.Visible = false
-    captureGuiTransparency()
-end
-
 local function playIntro()
     mainFrame.Position = FINAL_POSITION
     local introGrow = tween(mainFrame, TweenInfo.new(1, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = UDim2.new(0, 420, 0, 200) })
@@ -2143,25 +1857,15 @@ local function playIntro()
     captureGuiTransparency()
 end
 
+fetchVersion()
 sidebarVersion.Text = APP_VERSION
 updateStatusPill()
 updateEspPill()
 rebuildPartColorList()
 rebuildBlacklistList()
-rebuildTrackerList()
 refreshUiInputs()
 applyGuiSettings()
 refreshAllAppearances()
 showPage("esp")
 captureGuiTransparency()
-task.spawn(function()
-    local ok, err = pcall(playIntro)
-    if not ok then
-        forceOpenMainGui()
-        warn("MagnetoZz intro failed:", err)
-    end
-end)
-task.spawn(function()
-    fetchVersion()
-    sidebarVersion.Text = APP_VERSION
-end)
+task.spawn(playIntro)
