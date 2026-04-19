@@ -397,6 +397,7 @@ screenGui.Name = "MagnetoZzGui"
 screenGui.ResetOnSpawn = false
 screenGui.IgnoreGuiInset = true
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.DisplayOrder = 999999
 screenGui.Parent = playerGui
 
 local function makeTopPill(x, text)
@@ -2109,6 +2110,18 @@ connect(RunService.Heartbeat, function(deltaTime)
     updateEsp()
 end)
 
+local function forceOpenMainGui()
+    mainFrame.Position = FINAL_POSITION
+    mainFrame.Size = FINAL_SIZE
+    sidebar.Visible = true
+    sidebar.Position = UDim2.new(0, 12, 0, 12)
+    contentFrame.Visible = true
+    contentFrame.Position = UDim2.new(0, 197, 0, 12)
+    introTitle.Visible = false
+    introLine.Visible = false
+    captureGuiTransparency()
+end
+
 local function playIntro()
     mainFrame.Position = FINAL_POSITION
     local introGrow = tween(mainFrame, TweenInfo.new(1, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = UDim2.new(0, 420, 0, 200) })
@@ -2130,7 +2143,6 @@ local function playIntro()
     captureGuiTransparency()
 end
 
-fetchVersion()
 sidebarVersion.Text = APP_VERSION
 updateStatusPill()
 updateEspPill()
@@ -2142,4 +2154,14 @@ applyGuiSettings()
 refreshAllAppearances()
 showPage("esp")
 captureGuiTransparency()
-task.spawn(playIntro)
+task.spawn(function()
+    local ok, err = pcall(playIntro)
+    if not ok then
+        forceOpenMainGui()
+        warn("MagnetoZz intro failed:", err)
+    end
+end)
+task.spawn(function()
+    fetchVersion()
+    sidebarVersion.Text = APP_VERSION
+end)
