@@ -30,7 +30,10 @@ local CONFIG = {
     labelDistance = 6,
     updateInterval = 0.05,
     lineThickness = 0.08,
+    screenLineThickness = 1.5,
     lineOffset = Vector3.new(0, 0, 2),
+    maxVisible = 120,
+    showLabels = true,
     defaultColor = Color3.fromRGB(255, 255, 255),
     partColors = {
         OreNode = Color3.fromRGB(0, 200, 255),
@@ -72,6 +75,7 @@ local inputTextBoxes = {}
 local updatePageButtons
 local guiVisible = true
 local guiOriginalTransparency = {}
+local USE_DRAWING = type(Drawing) == "table" and type(Drawing.new) == "function"
 
 local function trim(text)
     return (text or ""):match("^%s*(.-)%s*$")
@@ -275,10 +279,45 @@ local function createLinePart()
     line.CanQuery = false
     line.CastShadow = false
     line.Transparency = 1
-    line.Material = Enum.Material.Neon
+    line.Material = Enum.Material.SmoothPlastic
     line.Size = Vector3.new(CONFIG.lineThickness, CONFIG.lineThickness, 1)
     line.Parent = workspace
     return line
+end
+
+local function createDrawingLine()
+    local ok, line = pcall(function()
+        return Drawing.new("Line")
+    end)
+    if not ok or not line then
+        return nil
+    end
+
+    line.Visible = false
+    line.Thickness = CONFIG.screenLineThickness
+    line.Transparency = 1
+    line.Color = CONFIG.defaultColor
+    return line
+end
+
+local function createDrawingText(text, color)
+    local ok, drawingText = pcall(function()
+        return Drawing.new("Text")
+    end)
+    if not ok or not drawingText then
+        return nil
+    end
+
+    drawingText.Visible = false
+    drawingText.Text = text
+    drawingText.Color = color
+    drawingText.Size = 13
+    drawingText.Center = true
+    drawingText.Outline = true
+    pcall(function()
+        drawingText.Font = 2
+    end)
+    return drawingText
 end
 
 local function createLabelAnchor()
@@ -1051,6 +1090,18 @@ local function loadConfig()
 end
 
 local function destroyEntry(entry)
+    if entry.drawLine then
+        pcall(function()
+            entry.drawLine:Remove()
+        end)
+        entry.drawLine = nil
+    end
+    if entry.drawText then
+        pcall(function()
+            entry.drawText:Remove()
+        end)
+        entry.drawText = nil
+    end
     if entry.label then
         entry.label:Destroy()
         entry.label = nil
@@ -1068,6 +1119,32 @@ local function destroyEntry(entry)
 end
 
 local function ensureEntryVisuals(entry)
+    if USE_DRAWING then
+        if entry.drawLine and entry.drawText then
+            return
+        end
+
+        entry.drawLine = createDrawingLine()
+        entry.drawText = createDrawingText(entry.part.Name, getColor(entry.part.Name))
+        if not entry.drawLine or not entry.drawText then
+            if entry.drawLine then
+                pcall(function()
+                    entry.drawLine:Remove()
+                end)
+                entry.drawLine = nil
+            end
+            if entry.drawText then
+                pcall(function()
+                    entry.drawText:Remove()
+                end)
+                entry.drawText = nil
+            end
+            USE_DRAWING = false
+        else
+            return
+        end
+    end
+
     if entry.line and entry.anchor and entry.label and entry.labelText then
         return
     end
@@ -1081,6 +1158,14 @@ local function refreshEntryAppearance(entry)
         return
     end
     local color = getColor(entry.part.Name)
+    if entry.drawLine then
+        entry.drawLine.Color = color
+        entry.drawLine.Thickness = CONFIG.screenLineThickness
+    end
+    if entry.drawText then
+        entry.drawText.Text = entry.part.Name
+        entry.drawText.Color = color
+    end
     if entry.line then
         entry.line.Color = color
     end
@@ -1110,6 +1195,12 @@ local function setEntryVisible(entry, visible)
     if entry.label then
         entry.label.Enabled = visible
     end
+    if entry.drawLine then
+        entry.drawLine.Visible = visible
+    end
+    if entry.drawText then
+        entry.drawText.Visible = visible and CONFIG.showLabels
+    end
     entry.visible = visible
 end
 
@@ -1117,7 +1208,16 @@ local function registerPart(part)
     if destroyed or trackedParts[part] or not part:IsA("BasePart") then
         return
     end
-    trackedParts[part] = { part = part, visible = false, line = nil, anchor = nil, label = nil, labelText = nil }
+    trackedParts[part] = {
+        part = part,
+        visible = false,
+        line = nil,
+        anchor = nil,
+        label = nil,
+        labelText = nil,
+        drawLine = nil,
+        drawText = nil,
+    }
 end
 
 local function unregisterPart(part)
@@ -1171,6 +1271,32 @@ local function updateEntry(entry, playerPos)
     end
     ensureEntryVisuals(entry)
     refreshEntryAppearance(entry)
+
+    if USE_DRAWING and entry.drawLine and entry.drawText then
+        local camera = workspace.CurrentCamera
+        if not camera then
+            setEntryVisible(entry, false)
+            return
+        end
+
+        local fromScreen, fromVisible = camera:WorldToViewportPoint(fromPos)
+        local toScreen, toVisible = camera:WorldToViewportPoint(toPos)
+        if fromScreen.Z <= 0 or toScreen.Z <= 0 or not fromVisible and not toVisible then
+            setEntryVisible(entry, false)
+            return
+        end
+
+        local labelOffset = math.min(CONFIG.labelDistance, math.max(2, distance * 0.25))
+        local labelScreen = camera:WorldToViewportPoint(fromPos + direction.Unit * labelOffset)
+
+        entry.drawLine.From = Vector2.new(fromScreen.X, fromScreen.Y)
+        entry.drawLine.To = Vector2.new(toScreen.X, toScreen.Y)
+        entry.drawText.Position = Vector2.new(labelScreen.X, labelScreen.Y - 12)
+        entry.drawText.Size = math.max(12, GUI_SETTINGS.bodyTextSize + 1)
+        setEntryVisible(entry, true)
+        return
+    end
+
     local midpoint = fromPos + direction / 2
     local labelOffset = math.min(CONFIG.labelDistance, math.max(2, distance * 0.25))
     entry.line.Size = Vector3.new(CONFIG.lineThickness, CONFIG.lineThickness, distance)
@@ -1194,11 +1320,38 @@ local function updateEsp()
         return
     end
     local playerPos = hrp.Position
+    local candidates = {}
+
     for part, entry in pairs(trackedParts) do
         if not part or not part.Parent then
             unregisterPart(part)
+        elseif isIgnored(part.Name) then
+            if entry.visible then
+                setEntryVisible(entry, false)
+            end
         else
-            updateEntry(entry, playerPos)
+            local distance = (part.Position - playerPos).Magnitude
+            if CONFIG.radius == 0 or distance <= CONFIG.radius then
+                table.insert(candidates, {
+                    entry = entry,
+                    distance = distance,
+                })
+            elseif entry.visible then
+                setEntryVisible(entry, false)
+            end
+        end
+    end
+
+    table.sort(candidates, function(a, b)
+        return a.distance < b.distance
+    end)
+
+    local maxVisible = CONFIG.maxVisible or #candidates
+    for index, candidate in ipairs(candidates) do
+        if index <= maxVisible then
+            updateEntry(candidate.entry, playerPos)
+        elseif candidate.entry.visible then
+            setEntryVisible(candidate.entry, false)
         end
     end
 end
