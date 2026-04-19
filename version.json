@@ -1,6 +1,6 @@
 {
   "name": "MagnetoZz",
-  "version": "0.2.2",
-  "status": "not stable",
+  "version": "0.2.3",
+  "status": "stable",
   "notes": "Initial GitHub loader release"
 }
