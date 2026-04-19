@@ -6,7 +6,7 @@ local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
-local chunksFolder = workspace:WaitForChild("Chunks")
+local chunksFolder = workspace:FindFirstChild("Chunks")
 
 local THEME = {
     accent = Color3.fromRGB(72, 100, 255),
@@ -67,6 +67,7 @@ local trackedParts = {}
 local activeEntries = {}
 local trackerActiveEntries = {}
 local connections = {}
+local chunksBound = false
 local heartbeatAccumulator = 0
 local targetRefreshAccumulator = 999
 local pageButtons = {}
@@ -2059,11 +2060,32 @@ connect(resetPathBtn.MouseButton1Click, function()
     setStatus(profilesStatus, "We'll wire this back in later.", THEME.muted)
 end)
 
-for _, descendant in ipairs(chunksFolder:GetDescendants()) do
-    registerPart(descendant)
+local function bindChunksFolder(folder)
+    if destroyed or chunksBound or not folder then
+        return
+    end
+
+    chunksFolder = folder
+    chunksBound = true
+    for _, descendant in ipairs(chunksFolder:GetDescendants()) do
+        registerPart(descendant)
+    end
+    connect(chunksFolder.DescendantAdded, function(descendant) registerPart(descendant) end)
+    connect(chunksFolder.DescendantRemoving, function(descendant) unregisterPart(descendant) end)
+    requestTargetRefresh()
 end
-connect(chunksFolder.DescendantAdded, function(descendant) registerPart(descendant) end)
-connect(chunksFolder.DescendantRemoving, function(descendant) unregisterPart(descendant) end)
+
+if chunksFolder then
+    bindChunksFolder(chunksFolder)
+else
+    setStatus(espStatus, "Waiting for workspace.Chunks...", THEME.muted)
+    connect(workspace.ChildAdded, function(child)
+        if child.Name == "Chunks" then
+            bindChunksFolder(child)
+        end
+    end)
+end
+
 connect(RunService.Heartbeat, function(deltaTime)
     local rebuiltTargets = false
 
