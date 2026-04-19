@@ -28,11 +28,13 @@ local CONFIG = {
     ignore = { "Baseplate", "SpawnLocation" },
     radius = 500,
     labelDistance = 6,
-    updateInterval = 0.05,
+    updateInterval = 0.03,
+    targetRefreshInterval = 0.35,
     lineThickness = 0.08,
     screenLineThickness = 1.5,
     lineOffset = Vector3.new(0, 0, 2),
-    maxVisible = 120,
+    maxVisible = 60,
+    closestPerName = true,
     showLabels = true,
     defaultColor = Color3.fromRGB(255, 255, 255),
     partColors = {
@@ -60,8 +62,10 @@ local espEnabled = false
 local destroyed = false
 local currentPage = "esp"
 local trackedParts = {}
+local activeEntries = {}
 local connections = {}
 local heartbeatAccumulator = 0
+local targetRefreshAccumulator = 999
 local pageButtons = {}
 local pages = {}
 local dragging = false
@@ -79,6 +83,10 @@ local USE_DRAWING = type(Drawing) == "table" and type(Drawing.new) == "function"
 
 local function trim(text)
     return (text or ""):match("^%s*(.-)%s*$")
+end
+
+local function requestTargetRefresh()
+    targetRefreshAccumulator = CONFIG.targetRefreshInterval
 end
 
 local function connect(signal, callback)
@@ -254,6 +262,7 @@ local function addToIgnore(partName)
         return false
     end
     table.insert(CONFIG.ignore, partName)
+    requestTargetRefresh()
     return true
 end
 
@@ -263,6 +272,7 @@ local function removeFromIgnore(partName)
         return false
     end
     table.remove(CONFIG.ignore, index)
+    requestTargetRefresh()
     return true
 end
 
@@ -1187,8 +1197,15 @@ end
 local function setEntryVisible(entry, visible)
     if visible then
         ensureEntryVisuals(entry)
-        refreshEntryAppearance(entry)
+        if not entry.visible then
+            refreshEntryAppearance(entry)
+        end
     end
+
+    if entry.visible == visible then
+        return
+    end
+
     if entry.line then
         entry.line.Transparency = visible and 0 or 1
     end
@@ -1218,6 +1235,11 @@ local function registerPart(part)
         drawLine = nil,
         drawText = nil,
     }
+    requestTargetRefresh()
+end
+
+local function clearActiveEntries()
+    table.clear(activeEntries)
 end
 
 local function unregisterPart(part)
@@ -1227,6 +1249,7 @@ local function unregisterPart(part)
     end
     destroyEntry(entry)
     trackedParts[part] = nil
+    requestTargetRefresh()
 end
 
 local function hideAllEntries()
@@ -1235,6 +1258,7 @@ local function hideAllEntries()
             setEntryVisible(entry, false)
         end
     end
+    clearActiveEntries()
 end
 
 local function setEspState(enabled)
@@ -1242,7 +1266,8 @@ local function setEspState(enabled)
     if espEnabled then
         espToggleBtn.Text = "ESP ON"
         espToggleBtn.BackgroundColor3 = THEME.success
-        setStatus(espStatus, "ESP enabled. Cached parts update on heartbeat.", THEME.white)
+        setStatus(espStatus, "ESP enabled. Rendering only the closest part for each name.", THEME.white)
+        requestTargetRefresh()
     else
         espToggleBtn.Text = "ESP OFF"
         espToggleBtn.BackgroundColor3 = THEME.danger
@@ -1270,7 +1295,6 @@ local function updateEntry(entry, playerPos)
         return
     end
     ensureEntryVisuals(entry)
-    refreshEntryAppearance(entry)
 
     if USE_DRAWING and entry.drawLine and entry.drawText then
         local camera = workspace.CurrentCamera
@@ -1281,7 +1305,7 @@ local function updateEntry(entry, playerPos)
 
         local fromScreen, fromVisible = camera:WorldToViewportPoint(fromPos)
         local toScreen, toVisible = camera:WorldToViewportPoint(toPos)
-        if fromScreen.Z <= 0 or toScreen.Z <= 0 or not fromVisible and not toVisible then
+        if fromScreen.Z <= 0 or toScreen.Z <= 0 or ((not fromVisible) and (not toVisible)) then
             setEntryVisible(entry, false)
             return
         end
@@ -1320,11 +1344,51 @@ local function updateEsp()
         return
     end
     local playerPos = hrp.Position
+    for index = #activeEntries, 1, -1 do
+        local entry = activeEntries[index]
+        local part = entry.part
+        if not part or not part.Parent or isIgnored(part.Name) then
+            setEntryVisible(entry, false)
+            table.remove(activeEntries, index)
+        else
+            local distance = (part.Position - playerPos).Magnitude
+            if CONFIG.radius ~= 0 and distance > CONFIG.radius then
+                setEntryVisible(entry, false)
+                table.remove(activeEntries, index)
+            else
+                updateEntry(entry, playerPos)
+            end
+        end
+    end
+end
+
+local function rebuildEspTargets()
+    if destroyed or not espEnabled then
+        return
+    end
+
+    local character = player.Character
+    if not character then
+        hideAllEntries()
+        return
+    end
+
+    local hrp = character:FindFirstChild("HumanoidRootPart")
+    if not hrp then
+        hideAllEntries()
+        return
+    end
+
+    local playerPos = hrp.Position
+    local selectedEntries = {}
+    local selectedLookup = {}
+    local nearestByName = {}
     local candidates = {}
+    local staleParts = {}
 
     for part, entry in pairs(trackedParts) do
         if not part or not part.Parent then
-            unregisterPart(part)
+            table.insert(staleParts, part)
         elseif isIgnored(part.Name) then
             if entry.visible then
                 setEntryVisible(entry, false)
@@ -1332,13 +1396,33 @@ local function updateEsp()
         else
             local distance = (part.Position - playerPos).Magnitude
             if CONFIG.radius == 0 or distance <= CONFIG.radius then
-                table.insert(candidates, {
-                    entry = entry,
-                    distance = distance,
-                })
+                if CONFIG.closestPerName then
+                    local existing = nearestByName[part.Name]
+                    if not existing or distance < existing.distance then
+                        nearestByName[part.Name] = {
+                            entry = entry,
+                            distance = distance,
+                        }
+                    end
+                else
+                    table.insert(candidates, {
+                        entry = entry,
+                        distance = distance,
+                    })
+                end
             elseif entry.visible then
                 setEntryVisible(entry, false)
             end
+        end
+    end
+
+    for _, part in ipairs(staleParts) do
+        unregisterPart(part)
+    end
+
+    if CONFIG.closestPerName then
+        for _, candidate in pairs(nearestByName) do
+            table.insert(candidates, candidate)
         end
     end
 
@@ -1346,14 +1430,21 @@ local function updateEsp()
         return a.distance < b.distance
     end)
 
-    local maxVisible = CONFIG.maxVisible or #candidates
-    for index, candidate in ipairs(candidates) do
-        if index <= maxVisible then
-            updateEntry(candidate.entry, playerPos)
-        elseif candidate.entry.visible then
-            setEntryVisible(candidate.entry, false)
+    local maxVisible = math.min(CONFIG.maxVisible or #candidates, #candidates)
+    for index = 1, maxVisible do
+        local entry = candidates[index].entry
+        selectedEntries[index] = entry
+        selectedLookup[entry] = true
+    end
+
+    for _, entry in pairs(trackedParts) do
+        if entry.visible and not selectedLookup[entry] then
+            setEntryVisible(entry, false)
         end
     end
+
+    activeEntries = selectedEntries
+    updateEsp()
 end
 
 local function rebuildPartColorList()
@@ -1468,7 +1559,7 @@ local function showPage(pageName)
     end
     if pageName == "esp" then
         contentTitle.Text = "ESP"
-        contentSubtitle.Text = "Fast line renderer with labels that sit near the player."
+        contentSubtitle.Text = "Fast line renderer. Duplicate ores collapse to the closest match."
     elseif pageName == "config" then
         contentTitle.Text = "Config"
         contentSubtitle.Text = "Radius, label distance, default color, and part overrides."
@@ -1613,6 +1704,7 @@ connect(applyBtn.MouseButton1Click, function()
         CONFIG.defaultColor = loadedColor
         defaultColorInput.Text = colorToHex(loadedColor)
     end
+    requestTargetRefresh()
     refreshAllAppearances()
     setStatus(applyStatus, "Settings applied.", THEME.success)
 end)
@@ -1719,7 +1811,21 @@ end
 connect(chunksFolder.DescendantAdded, function(descendant) registerPart(descendant) end)
 connect(chunksFolder.DescendantRemoving, function(descendant) unregisterPart(descendant) end)
 connect(RunService.Heartbeat, function(deltaTime)
+    local rebuiltTargets = false
+
+    targetRefreshAccumulator = targetRefreshAccumulator + deltaTime
+    if targetRefreshAccumulator >= CONFIG.targetRefreshInterval then
+        targetRefreshAccumulator = 0
+        rebuildEspTargets()
+        rebuiltTargets = true
+    end
+
     heartbeatAccumulator = heartbeatAccumulator + deltaTime
+    if rebuiltTargets then
+        heartbeatAccumulator = 0
+        return
+    end
+
     if heartbeatAccumulator < CONFIG.updateInterval then
         return
     end
