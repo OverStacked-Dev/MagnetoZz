@@ -54,6 +54,8 @@ local GUI_SETTINGS = {
 }
 
 local VERSION_URL = "https://raw.githubusercontent.com/OverStacked-Dev/MagnetoZz/main/version.json"
+local SUPABASE_URL = "https://xvdrhzgfjjsmosjlwtwr.supabase.co"
+local SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2ZHJoemdmampzbW9zamx3dHdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MTI4NzksImV4cCI6MjA5MjE4ODg3OX0.NuJXJsJ_fAgaOKD_l-ZSwlIIAVDPJiZhPbIDRQ1rWas"
 local APP_VERSION = "v1.0.0"
 local FINAL_SIZE = UDim2.new(0, 800, 0, 456)
 local FINAL_POSITION = UDim2.new(0.5, 0, 0.5, 0)
@@ -940,15 +942,15 @@ guiInfo.TextWrapped = true
 guiInfo.Text = "Accent color affects the menu highlight only. Default line color is managed separately from the ESP page."
 guiInfo.TextColor3 = THEME.white
 
-local profilesSection = makeSection(profilesPage, "Profiles WIP", 0, 190)
+local profilesSection = makeSection(profilesPage, "Supabase Profiles", 0, 190)
 local profilesHint = makeStatusLabel(profilesSection, 12, 46, 500)
 profilesHint.Size = UDim2.new(1, -24, 0, 56)
 profilesHint.TextWrapped = true
-profilesHint.Text = "Profile save / load is paused for now while the ESP and GUI systems keep changing. We can wire it back in once the structure is settled."
+profilesHint.Text = "Save and load your config from Supabase using your Roblox UserId. Blacklist and per-part colors are stored separately."
 profilesHint.TextColor3 = THEME.white
-local exportBtn = makeActionButton(profilesSection, "Export WIP", 12, 120, 136, THEME.panelAlt)
-local importBtn = makeActionButton(profilesSection, "Import WIP", 160, 120, 136, THEME.panelAlt)
-local resetPathBtn = makeActionButton(profilesSection, "Later", 308, 120, 110, THEME.panelAlt)
+local exportBtn = makeActionButton(profilesSection, "Save DB", 12, 120, 136, THEME.success)
+local importBtn = makeActionButton(profilesSection, "Load DB", 160, 120, 136, THEME.accent)
+local resetPathBtn = makeActionButton(profilesSection, "DB Info", 308, 120, 110, THEME.panelAlt)
 local profilesStatus = makeStatusLabel(profilesSection, 12, 162, 450)
 
 local lineColorPrompt = Instance.new("Frame")
@@ -992,6 +994,9 @@ lineColorPromptStatus.ZIndex = 21
 
 local partColorRows = {}
 local blacklistRows = {}
+local refreshAllAppearances
+local rebuildPartColorList
+local rebuildBlacklistList
 
 local function refreshUiInputs()
     radiusInput.Text = tostring(CONFIG.radius)
@@ -1092,12 +1097,220 @@ local function applyConfigPayload(payload)
     return true, "Config loaded."
 end
 
+local function getHttpRequest()
+    if typeof(request) == "function" then
+        return request
+    end
+    if typeof(http_request) == "function" then
+        return http_request
+    end
+    if typeof(syn) == "table" and typeof(syn.request) == "function" then
+        return syn.request
+    end
+    if typeof(http) == "table" and typeof(http.request) == "function" then
+        return http.request
+    end
+    if typeof(fluxus) == "table" and typeof(fluxus.request) == "function" then
+        return fluxus.request
+    end
+    return nil
+end
+
+local function supabaseHeaders(prefer)
+    local headers = {
+        apikey = SUPABASE_ANON_KEY,
+        Authorization = "Bearer " .. SUPABASE_ANON_KEY,
+    }
+    if prefer then
+        headers.Prefer = prefer
+    end
+    return headers
+end
+
+local function supabaseRequest(method, path, body, prefer)
+    local requestFn = getHttpRequest()
+    if not requestFn then
+        return false, "Executor HTTP request is not available."
+    end
+
+    local headers = supabaseHeaders(prefer)
+    if body ~= nil then
+        headers["Content-Type"] = "application/json"
+    end
+
+    local requestOk, response = pcall(function()
+        return requestFn({
+            Url = SUPABASE_URL .. "/rest/v1/" .. path,
+            Method = method,
+            Headers = headers,
+            Body = body ~= nil and HttpService:JSONEncode(body) or nil,
+        })
+    end)
+
+    if not requestOk then
+        return false, "Supabase request failed: " .. tostring(response)
+    end
+
+    local rawStatus = response and (response.StatusCode or response.status_code or response.Status or response.status)
+    local status = tonumber(rawStatus) or tonumber(tostring(rawStatus):match("%d+")) or 0
+    local responseBody = response and (response.Body or response.body) or ""
+    if status < 200 or status >= 300 then
+        return false, "Supabase HTTP " .. tostring(status) .. ": " .. tostring(responseBody)
+    end
+
+    if responseBody == "" then
+        return true, nil
+    end
+
+    local ok, decoded = pcall(function()
+        return HttpService:JSONDecode(responseBody)
+    end)
+    if not ok then
+        return true, nil
+    end
+    return true, decoded
+end
+
+local function buildPartColorPayload()
+    local payload = {}
+    for partName, color in pairs(CONFIG.partColors) do
+        payload[partName] = colorToHex(color)
+    end
+    return payload
+end
+
 local function saveConfig()
-    return false, "Profiles are WIP for now."
+    local playerId = player.UserId
+    local configPayload = {
+        {
+            player_id = playerId,
+            player_name = player.Name,
+            radius = CONFIG.radius,
+            label_distance = CONFIG.labelDistance,
+            default_line_color = colorToHex(CONFIG.defaultColor),
+            gui_accent = colorToHex(GUI_SETTINGS.accentColor),
+            part_colors = buildPartColorPayload(),
+            updated_at = os.date("!%Y-%m-%dT%H:%M:%SZ"),
+        },
+    }
+
+    local ok, result = supabaseRequest(
+        "POST",
+        "magnetozz_config?on_conflict=player_id",
+        configPayload,
+        "resolution=merge-duplicates,return=minimal"
+    )
+    if not ok then
+        return false, result
+    end
+
+    ok, result = supabaseRequest(
+        "DELETE",
+        "magnetozz_blacklist?player_id=eq." .. tostring(playerId),
+        nil,
+        "return=minimal"
+    )
+    if not ok then
+        return false, result
+    end
+
+    local blacklistRows = {}
+    for _, partName in ipairs(CONFIG.ignore) do
+        if typeof(partName) == "string" and trim(partName) ~= "" then
+            table.insert(blacklistRows, {
+                player_id = playerId,
+                player_name = player.Name,
+                part_name = trim(partName),
+            })
+        end
+    end
+
+    if #blacklistRows > 0 then
+        ok, result = supabaseRequest(
+            "POST",
+            "magnetozz_blacklist",
+            blacklistRows,
+            "return=minimal"
+        )
+        if not ok then
+            return false, result
+        end
+    end
+
+    return true, "Saved config + blacklist to Supabase."
 end
 
 local function loadConfig()
-    return false, "Profiles are WIP for now."
+    local playerId = player.UserId
+    local ok, configRows = supabaseRequest(
+        "GET",
+        "magnetozz_config?player_id=eq." .. tostring(playerId) .. "&select=*"
+    )
+    if not ok then
+        return false, configRows
+    end
+
+    local config = typeof(configRows) == "table" and configRows[1] or nil
+    if config then
+        if typeof(config.radius) == "number" then
+            CONFIG.radius = math.max(0, config.radius)
+        end
+        if typeof(config.label_distance) == "number" then
+            CONFIG.labelDistance = math.max(2, config.label_distance)
+        end
+        if typeof(config.default_line_color) == "string" then
+            local loadedColor = colorFromHex(config.default_line_color)
+            if loadedColor then
+                CONFIG.defaultColor = loadedColor
+            end
+        end
+        if typeof(config.gui_accent) == "string" then
+            local loadedAccent = colorFromHex(config.gui_accent)
+            if loadedAccent then
+                GUI_SETTINGS.accentColor = loadedAccent
+            end
+        end
+        if typeof(config.part_colors) == "table" then
+            CONFIG.partColors = {}
+            for partName, hex in pairs(config.part_colors) do
+                if typeof(partName) == "string" and typeof(hex) == "string" then
+                    local loadedColor = colorFromHex(hex)
+                    if loadedColor then
+                        CONFIG.partColors[partName] = loadedColor
+                    end
+                end
+            end
+        end
+    end
+
+    local blacklistOk, blacklistRows = supabaseRequest(
+        "GET",
+        "magnetozz_blacklist?player_id=eq." .. tostring(playerId) .. "&select=part_name"
+    )
+    if not blacklistOk then
+        return false, blacklistRows
+    end
+
+    if typeof(blacklistRows) == "table" then
+        CONFIG.ignore = {}
+        for _, row in ipairs(blacklistRows) do
+            if typeof(row) == "table" and typeof(row.part_name) == "string" and trim(row.part_name) ~= "" then
+                table.insert(CONFIG.ignore, trim(row.part_name))
+            end
+        end
+    end
+
+    refreshUiInputs()
+    applyGuiSettings()
+    rebuildPartColorList()
+    rebuildBlacklistList()
+    refreshAllAppearances()
+    requestTargetRefresh()
+
+    if config then
+        return true, "Loaded Supabase profile."
+    end
+    return false, "No Supabase config found yet. Save first."
 end
 
 local function destroyEntry(entry)
@@ -1186,7 +1399,7 @@ local function refreshEntryAppearance(entry)
     end
 end
 
-local function refreshAllAppearances()
+refreshAllAppearances = function()
     lineColorPreview.BackgroundColor3 = CONFIG.defaultColor
     defaultColorInput.Text = colorToHex(CONFIG.defaultColor)
     accentHex.Text = "#" .. colorToHex(CONFIG.defaultColor) .. " click square to change"
@@ -1449,7 +1662,7 @@ local function rebuildEspTargets()
     updateEsp()
 end
 
-local function rebuildPartColorList()
+rebuildPartColorList = function()
     for _, row in ipairs(partColorRows) do
         row:Destroy()
     end
@@ -1500,7 +1713,7 @@ local function rebuildPartColorList()
     captureGuiTransparency()
 end
 
-local function rebuildBlacklistList()
+rebuildBlacklistList = function()
     for _, row in ipairs(blacklistRows) do
         row:Destroy()
     end
@@ -1798,13 +2011,21 @@ connect(addBlacklistBtn.MouseButton1Click, function()
 end)
 
 connect(exportBtn.MouseButton1Click, function()
-    setStatus(profilesStatus, "Profiles are WIP for now.", THEME.muted)
+    setStatus(profilesStatus, "Saving to Supabase...", THEME.white)
+    task.spawn(function()
+        local ok, message = saveConfig()
+        setStatus(profilesStatus, message, ok and THEME.success or THEME.danger)
+    end)
 end)
 connect(importBtn.MouseButton1Click, function()
-    setStatus(profilesStatus, "Profiles are WIP for now.", THEME.muted)
+    setStatus(profilesStatus, "Loading from Supabase...", THEME.white)
+    task.spawn(function()
+        local ok, message = loadConfig()
+        setStatus(profilesStatus, message, ok and THEME.success or THEME.danger)
+    end)
 end)
 connect(resetPathBtn.MouseButton1Click, function()
-    setStatus(profilesStatus, "We'll wire this back in later.", THEME.muted)
+    setStatus(profilesStatus, "Profile key: " .. tostring(player.UserId) .. "_data", THEME.muted)
 end)
 
 for _, descendant in ipairs(chunksFolder:GetDescendants()) do
