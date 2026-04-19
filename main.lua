@@ -12,7 +12,7 @@ local THEME = {
     accent = Color3.fromRGB(72, 100, 255),
     shell = Color3.fromRGB(21, 24, 34),
     sidebar = Color3.fromRGB(35, 37, 46),
-    content = Color3.fromRGB(83, 87, 99),
+    content = Color3.fromRGB(70, 78, 104),
     panel = Color3.fromRGB(37, 39, 48),
     panelAlt = Color3.fromRGB(24, 25, 32),
     text = Color3.fromRGB(245, 246, 255),
@@ -70,6 +70,7 @@ local buttonTextLabels = {}
 local inputTextBoxes = {}
 local updatePageButtons
 local guiVisible = true
+local guiOriginalTransparency = {}
 
 local function trim(text)
     return (text or ""):match("^%s*(.-)%s*$")
@@ -635,6 +636,46 @@ local function setStatus(label, text, color)
     label.TextColor3 = color or THEME.muted
 end
 
+local function captureGuiTransparency()
+    table.clear(guiOriginalTransparency)
+
+    local function capture(instance)
+        local props = {}
+        if instance:IsA("GuiObject") then
+            props.BackgroundTransparency = instance.BackgroundTransparency
+        end
+        if instance:IsA("TextLabel") or instance:IsA("TextButton") or instance:IsA("TextBox") then
+            props.TextTransparency = instance.TextTransparency
+        end
+        if instance:IsA("ImageLabel") or instance:IsA("ImageButton") then
+            props.ImageTransparency = instance.ImageTransparency
+        end
+        if instance:IsA("UIStroke") then
+            props.Transparency = instance.Transparency
+        end
+        if next(props) then
+            guiOriginalTransparency[instance] = props
+        end
+    end
+
+    capture(mainFrame)
+    for _, descendant in ipairs(mainFrame:GetDescendants()) do
+        capture(descendant)
+    end
+end
+
+local function tweenGuiTransparency(hidden)
+    for instance, props in pairs(guiOriginalTransparency) do
+        if instance.Parent then
+            local goal = {}
+            for prop, originalValue in pairs(props) do
+                goal[prop] = hidden and 1 or originalValue
+            end
+            safeTween(instance, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), goal)
+        end
+    end
+end
+
 local function setGuiVisible(visible)
     if destroyed or guiVisible == visible then
         return
@@ -646,26 +687,15 @@ local function setGuiVisible(visible)
         mainFrame.Visible = true
     end
 
-    local targetScale = visible and 1 or 0.86
-    local targetTransparency = visible and 0.03 or 1
-    local targetStrokeTransparency = visible and 0 or 1
-    local easingDirection = visible and Enum.EasingDirection.In or Enum.EasingDirection.Out
+    local targetScale = visible and 1 or 0.985
+    local easingDirection = visible and Enum.EasingDirection.Out or Enum.EasingDirection.In
 
     local scaleTween = safeTween(
         guiScale,
         TweenInfo.new(0.5, Enum.EasingStyle.Back, easingDirection),
         { Scale = targetScale }
     )
-    safeTween(
-        mainFrame,
-        TweenInfo.new(0.5, Enum.EasingStyle.Back, easingDirection),
-        { BackgroundTransparency = targetTransparency }
-    )
-    safeTween(
-        mainStroke,
-        TweenInfo.new(0.5, Enum.EasingStyle.Back, easingDirection),
-        { Transparency = targetStrokeTransparency }
-    )
+    tweenGuiTransparency(not visible)
 
     if not visible then
         if scaleTween then
@@ -1134,6 +1164,8 @@ local function rebuildPartColorList()
         end)
         table.insert(partColorRows, row)
     end
+
+    captureGuiTransparency()
 end
 
 local function rebuildBlacklistList()
@@ -1173,6 +1205,8 @@ local function rebuildBlacklistList()
         end)
         table.insert(blacklistRows, row)
     end
+
+    captureGuiTransparency()
 end
 
 connect(partColorLayout:GetPropertyChangedSignal("AbsoluteContentSize"), function()
@@ -1455,14 +1489,14 @@ local function playIntro()
     task.wait(0.18)
     sidebar.Visible = true
     contentFrame.Visible = true
+    introTitle.Visible = false
     local openTween = tween(mainFrame, TweenInfo.new(0.6, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Size = FINAL_SIZE })
     tween(sidebar, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Position = UDim2.new(0, 12, 0, 12) })
     tween(contentFrame, TweenInfo.new(0.45, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), { Position = UDim2.new(0, 197, 0, 12) })
     tween(introLine, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { BackgroundTransparency = 1 })
-    tween(introTitle, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { TextTransparency = 1 })
     openTween.Completed:Wait()
     introLine.Visible = false
-    introTitle.Visible = false
+    captureGuiTransparency()
 end
 
 fetchVersion()
@@ -1473,4 +1507,5 @@ refreshUiInputs()
 applyGuiSettings()
 refreshAllAppearances()
 showPage("esp")
+captureGuiTransparency()
 task.spawn(playIntro)
