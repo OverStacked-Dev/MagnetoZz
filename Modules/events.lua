@@ -44,6 +44,7 @@ function shutdown()
     pcall(function() script:Destroy() end)
 end
 
+print("MagnetoZz EXEC debug: events page buttons")
 makePageButton("esp", "Main", 1)
 makePageButton("config", "ESP Config", 2)
 makePageButton("blacklist", "Blacklist", 3)
@@ -53,6 +54,7 @@ for pageName, button in pairs(pageButtons) do
     connect(button.MouseButton1Click, function() showPage(pageName) end)
 end
 
+print("MagnetoZz EXEC debug: events base connections")
 connect(closeBtn.MouseButton1Click, shutdown)
 connect(closeBtn.MouseEnter, function() closeBtn.BackgroundTransparency = 0.12 end)
 connect(closeBtn.MouseLeave, function() closeBtn.BackgroundTransparency = 0 end)
@@ -75,6 +77,7 @@ function closeLineColorPrompt()
     lineColorPrompt.Visible = false
 end
 
+print("MagnetoZz EXEC debug: events prompt connections")
 connect(lineColorPreview.MouseButton1Click, openLineColorPrompt)
 connect(lineColorPromptCancel.MouseButton1Click, closeLineColorPrompt)
 connect(lineColorPromptApply.MouseButton1Click, function()
@@ -184,7 +187,7 @@ connect(UserInputService.InputBegan, function(input, gameProcessed)
     end
 
     if input.KeyCode == GUI_SETTINGS.toggleKey then
-        task.spawn(function()
+        runAsync(function()
             setGuiVisible(not guiVisible)
         end)
     elseif input.KeyCode == GUI_SETTINGS.espToggleKey then
@@ -193,7 +196,7 @@ connect(UserInputService.InputBegan, function(input, gameProcessed)
 end)
 
 connect(statusPill.MouseButton1Click, function()
-    task.spawn(function()
+    runAsync(function()
         setGuiVisible(not guiVisible)
     end)
 end)
@@ -324,14 +327,14 @@ end)
 
 connect(exportBtn.MouseButton1Click, function()
     setStatus(profilesStatus, "Saving to Supabase...", THEME.white)
-    task.spawn(function()
+    runAsync(function()
         local ok, message = saveConfig()
         setStatus(profilesStatus, message, ok and THEME.success or THEME.danger)
     end)
 end)
 connect(importBtn.MouseButton1Click, function()
     setStatus(profilesStatus, "Loading from Supabase...", THEME.white)
-    task.spawn(function()
+    runAsync(function()
         local ok, message = loadConfig()
         setStatus(profilesStatus, message, ok and THEME.success or THEME.danger)
     end)
@@ -340,6 +343,7 @@ connect(resetPathBtn.MouseButton1Click, function()
     setStatus(profilesStatus, "Profile key: " .. tostring(player.UserId) .. "_data", THEME.muted)
 end)
 
+print("MagnetoZz EXEC debug: events cache parts")
 for _, descendant in ipairs(chunksFolder:GetDescendants()) do
     registerPart(descendant)
 end
@@ -390,6 +394,7 @@ function playIntro()
     captureGuiTransparency()
 end
 
+print("MagnetoZz EXEC debug: events final startup")
 fetchVersion()
 sidebarVersion.Text = APP_VERSION .. " | By OverStacked-Dev"
 updateStatusPill()
@@ -401,4 +406,4 @@ applyGuiSettings()
 refreshAllAppearances()
 showPage("esp")
 captureGuiTransparency()
-task.spawn(playIntro)
+runAsync(playIntro)

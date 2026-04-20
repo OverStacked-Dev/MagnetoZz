@@ -5,6 +5,12 @@ UserInputService = game:GetService("UserInputService")
 TweenService = game:GetService("TweenService")
 HttpService = game:GetService("HttpService")
 
+if not math.clamp then
+    function math.clamp(value, minValue, maxValue)
+        return math.max(minValue, math.min(maxValue, value))
+    end
+end
+
 player = Players.LocalPlayer
 playerGui = player:WaitForChild("PlayerGui")
 chunksFolder = workspace:WaitForChild("Chunks")
@@ -92,6 +98,19 @@ end
 
 function requestTargetRefresh()
     targetRefreshAccumulator = CONFIG.targetRefreshInterval
+end
+
+function runAsync(callback)
+    if task and type(task.spawn) == "function" then
+        return task.spawn(callback)
+    end
+
+    local thread = coroutine.create(callback)
+    local ok, err = coroutine.resume(thread)
+    if not ok then
+        error(err)
+    end
+    return thread
 end
 
 function connect(signal, callback)
