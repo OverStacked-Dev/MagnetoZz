@@ -8,6 +8,15 @@ local player = Players.LocalPlayer
 local playerGui = player:WaitForChild("PlayerGui")
 local chunksFolder = workspace:WaitForChild("Chunks")
 
+local MODULES = {
+    "modules/bootstrap.lua",
+    "modules/shell.lua",
+    "modules/pages.lua",
+    "modules/data.lua",
+    "modules/esp.lua",
+    "modules/events.lua",
+}
+
 local THEME = {
     accent = Color3.fromRGB(72, 100, 255),
     shell = Color3.fromRGB(21, 24, 34),
