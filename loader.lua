@@ -4,13 +4,21 @@ local StarterGui = game:GetService("StarterGui")
 local function notify(text)
     print("MagnetoZz Loader: " .. text)
 
-    pcall(function()
-        StarterGui:SetCore("SendNotification", {
-            Title = "MagnetoZz",
-            Text = text,
-            Duration = 3,
-        })
-    end)
+    for _ = 1, 6 do
+        local ok = pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "MagnetoZz",
+                Text = text,
+                Duration = 3,
+            })
+        end)
+
+        if ok then
+            return
+        end
+
+        task.wait(0.25)
+    end
 end
 
 notify("Started")
@@ -28,11 +36,7 @@ if not mainFn then
     error("MagnetoZz loader failed to compile main.lua: " .. tostring(compileErr))
 end
 
-notify("Loaded 50%")
-
 local okRun, runErr = pcall(mainFn)
 if not okRun then
     error("MagnetoZz loader runtime error: " .. tostring(runErr))
 end
-
-notify("Finished")
