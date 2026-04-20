@@ -52,6 +52,9 @@ function unregisterPart(part)
     if not entry then
         return
     end
+    if unregisterTrackerPart then
+        unregisterTrackerPart(part)
+    end
     destroyEntry(entry)
     trackedParts[part] = nil
     requestTargetRefresh()
@@ -262,7 +265,7 @@ rebuildPartColorList = function()
     table.clear(partColorRows)
     for partName, color in pairs(CONFIG.partColors) do
         local row = Instance.new("TextButton")
-        row.Size = UDim2.new(1, -10, 0, 30)
+        row.Size = UDim2.new(1, -18, 0, 30)
         row.AutoButtonColor = false
         row.BackgroundColor3 = THEME.panel
         row.BorderSizePixel = 0

@@ -38,6 +38,10 @@ function shutdown()
         destroyEntry(entry)
         trackedParts[part] = nil
     end
+    for part, entry in pairs(trackerEntries) do
+        destroyEntry(entry)
+        trackerEntries[part] = nil
+    end
     if screenGui.Parent then
         screenGui:Destroy()
     end
@@ -162,6 +166,46 @@ connect(tracerSaveBtn.MouseButton1Click, function()
     closeTracerEditPrompt()
 end)
 
+openTrackerConfigPrompt = function()
+    trackerWhitelistStatus.Text = ""
+    trackerWhitelistInput.Text = ""
+    rebuildTrackerWhitelistList()
+    trackerConfigPrompt.Visible = true
+
+    if GUI_SETTINGS.animationsEnabled then
+        local promptScale = trackerConfigPrompt:FindFirstChild("PromptScale")
+        if promptScale then
+            promptScale.Scale = 0.92
+            tween(promptScale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 })
+        end
+    end
+end
+
+function closeTrackerConfigPrompt()
+    trackerConfigPrompt.Visible = false
+end
+
+connect(trackerWhitelistCloseBtn.MouseButton1Click, closeTrackerConfigPrompt)
+connect(trackerWhitelistAddBtn.MouseButton1Click, function()
+    local oreName = trim(trackerWhitelistInput.Text)
+    if oreName == "" then
+        setStatus(trackerWhitelistStatus, "Ore name required.", THEME.danger)
+        return
+    end
+
+    if addTrackerWhitelist(oreName) then
+        trackerWhitelistInput.Text = ""
+        rebuildTrackerWhitelistList()
+        requestTargetRefresh()
+        setStatus(trackerWhitelistStatus, "Added " .. oreName, THEME.success)
+        if trackerEnabled then
+            setStatus(trackerStatus, "Tracker enabled for " .. tostring(#CONFIG.trackerWhitelist) .. " whitelisted ores.", THEME.white)
+        end
+    else
+        setStatus(trackerWhitelistStatus, oreName .. " already tracked.", THEME.muted)
+    end
+end)
+
 connect(dragHandle.InputBegan, function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 then
         dragging = true
@@ -210,10 +254,11 @@ connect(espToggleBtn.MouseButton1Click, function()
 end)
 
 connect(trackerToggleBtn.MouseButton1Click, function()
-    trackerWipEnabled = not trackerWipEnabled
-    trackerToggleBtn.Text = trackerWipEnabled and "Tracker ESP ON WIP" or "Tracker ESP OFF WIP"
-    trackerToggleBtn.BackgroundColor3 = trackerWipEnabled and THEME.success or THEME.danger
-    setStatus(trackerStatus, "WIP placeholder only. No tracker rendering yet.", THEME.muted)
+    setTrackerState(not trackerEnabled)
+end)
+
+connect(trackerConfigBtn.MouseButton1Click, function()
+    openTrackerConfigPrompt()
 end)
 
 connect(applyBtn.MouseButton1Click, function()
@@ -357,6 +402,7 @@ connect(RunService.Heartbeat, function(deltaTime)
     if targetRefreshAccumulator >= CONFIG.targetRefreshInterval then
         targetRefreshAccumulator = 0
         rebuildEspTargets()
+        rebuildTrackerTargets()
         rebuiltTargets = true
     end
 
@@ -371,6 +417,7 @@ connect(RunService.Heartbeat, function(deltaTime)
     end
     heartbeatAccumulator = 0
     updateEsp()
+    updateTrackerEsp()
 end)
 
 function playIntro()
@@ -401,6 +448,7 @@ updateStatusPill()
 updateEspPill()
 rebuildPartColorList()
 rebuildBlacklistList()
+rebuildTrackerWhitelistList()
 refreshUiInputs()
 applyGuiSettings()
 refreshAllAppearances()

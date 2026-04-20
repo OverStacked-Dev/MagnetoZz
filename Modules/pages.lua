@@ -8,9 +8,10 @@ profilesPage = makePage("profiles")
 espSection = makeSection(espPage, "Runtime", 0, 176)
 espToggleBtn = makeActionButton(espSection, "ESP OFF", 12, 44, 146, THEME.danger)
 espStatus = makeStatusLabel(espSection, 172, 52, 300)
-trackerToggleBtn = makeActionButton(espSection, "Tracker ESP OFF WIP", 12, 84, 184, THEME.danger)
-trackerStatus = makeStatusLabel(espSection, 210, 92, 300)
-trackerStatus.Text = "Placeholder only. Tracker ESP does not render yet."
+trackerToggleBtn = makeActionButton(espSection, "Tracker ESP OFF", 12, 84, 146, THEME.danger)
+trackerConfigBtn = makeActionButton(espSection, string.char(226, 154, 153), 170, 84, 34, THEME.panelAlt)
+trackerStatus = makeStatusLabel(espSection, 218, 92, 300)
+trackerStatus.Text = "Whitelist tracker. Click the gear to choose ores."
 espInfo = makeStatusLabel(espSection, 12, 132, 450)
 espInfo.Size = UDim2.new(1, -24, 0, 24)
 espInfo.TextWrapped = true
@@ -40,24 +41,24 @@ accentHint = makeStatusLabel(themeSection, 90, 96, 300)
 accentHint.Text = "GUI accent is separate from line color."
 accentHint.TextColor3 = THEME.white
 
-configTop = makeSection(configPage, "Settings", 0, 118)
-makeLabel(configTop, "Radius", 96, 42, 80)
-radiusInput = makeInput(configTop, "500", 96, 62, 108)
+configTop = makeSection(configPage, "Settings", 0, 96)
+makeLabel(configTop, "Radius", 96, 34, 80)
+radiusInput = makeInput(configTop, "500", 96, 54, 108)
 radiusInput.Text = tostring(CONFIG.radius)
 defaultColorLabel = makeLabel(configTop, "Default Color", 148, 42, 100)
 defaultColorLabel.Visible = false
 defaultColorInput = makeInput(configTop, "FFFFFF", 148, 62, 108)
 defaultColorInput.Text = colorToHex(CONFIG.defaultColor)
 defaultColorInput.Visible = false
-makeLabel(configTop, "Label Distance", 244, 42, 110)
-labelDistanceInput = makeInput(configTop, "6", 244, 62, 108)
+makeLabel(configTop, "Label Distance", 244, 34, 110)
+labelDistanceInput = makeInput(configTop, "6", 244, 54, 108)
 labelDistanceInput.Text = tostring(CONFIG.labelDistance)
-applyBtn = makeActionButton(configTop, "Apply", 392, 62, 92, THEME.accent)
-applyStatus = makeStatusLabel(configTop, 18, 98, 360)
+applyBtn = makeActionButton(configTop, "Apply", 392, 54, 92, THEME.accent)
+applyStatus = makeStatusLabel(configTop, 18, 78, 360)
 
-partColorSection = makeSection(configPage, "Manual Tracer Settings", 134, 202)
+partColorSection = makeSection(configPage, "Manual Tracer Settings", 112, 270)
 partColorList = Instance.new("ScrollingFrame")
-partColorList.Size = UDim2.new(1, -24, 0, 104)
+partColorList.Size = UDim2.new(1, -24, 0, 168)
 partColorList.Position = UDim2.new(0, 12, 0, 42)
 partColorList.BackgroundColor3 = THEME.panelAlt
 partColorList.BorderSizePixel = 0
@@ -68,13 +69,14 @@ addCorner(partColorList, 12)
 addStroke(partColorList, THEME.border, 2)
 partColorLayout = Instance.new("UIListLayout")
 partColorLayout.Padding = UDim.new(0, 6)
+partColorLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 partColorLayout.Parent = partColorList
-addNameInput = makeInput(partColorSection, "Ore Name", 51, 150, 145)
-addColorInput = makeInput(partColorSection, "Color", 206, 150, 90)
-addThicknessInput = makeInput(partColorSection, "Thickness", 306, 150, 92)
+addNameInput = makeInput(partColorSection, "Ore Name", 51, 218, 145)
+addColorInput = makeInput(partColorSection, "Color", 206, 218, 90)
+addThicknessInput = makeInput(partColorSection, "Thickness", 306, 218, 92)
 addThicknessInput.Text = tostring(CONFIG.screenLineThickness)
-addColorBtn = makeActionButton(partColorSection, "Add Tracer", 410, 150, 110, THEME.success)
-partColorStatus = makeStatusLabel(partColorSection, 51, 184, 430)
+addColorBtn = makeActionButton(partColorSection, "Add Tracer", 410, 218, 110, THEME.success)
+partColorStatus = makeStatusLabel(partColorSection, 51, 252, 430)
 
 blacklistSection = makeSection(blacklistPage, "Ignored Ores", 0, 320)
 blacklistList = Instance.new("ScrollingFrame")
@@ -126,7 +128,7 @@ profilesSection = makeSection(profilesPage, "Save / Load Profile", 0, 190)
 profilesHint = makeStatusLabel(profilesSection, 12, 46, 500)
 profilesHint.Size = UDim2.new(1, -24, 0, 56)
 profilesHint.TextWrapped = true
-profilesHint.Text = "Save and load your profile from Supabase. Blacklist and Manual Tracer Settings use your Roblox UserId."
+profilesHint.Text = "Save and load your profile from Supabase. Blacklist, Tracker Whitelist, and Manual Tracer Settings use your Roblox UserId."
 profilesHint.TextColor3 = THEME.white
 exportBtn = makeActionButton(profilesSection, "Save", 12, 120, 136, THEME.success)
 importBtn = makeActionButton(profilesSection, "Load", 160, 120, 136, THEME.accent)
@@ -218,13 +220,71 @@ tracerDeleteBtn.ZIndex = 21
 tracerEditStatus = makeStatusLabel(tracerEditPrompt, 18, 200, 300)
 tracerEditStatus.ZIndex = 21
 
+trackerConfigPrompt = Instance.new("Frame")
+trackerConfigPrompt.Size = UDim2.new(0, 340, 0, 270)
+trackerConfigPrompt.AnchorPoint = Vector2.new(0.5, 0.5)
+trackerConfigPrompt.Position = UDim2.new(0.5, 0, 0.5, 0)
+trackerConfigPrompt.BackgroundColor3 = THEME.panel
+trackerConfigPrompt.BorderSizePixel = 0
+trackerConfigPrompt.Visible = false
+trackerConfigPrompt.ZIndex = 20
+trackerConfigPrompt.Parent = mainFrame
+addCorner(trackerConfigPrompt, 16)
+addStroke(trackerConfigPrompt, THEME.border, 2)
+trackerConfigScale = Instance.new("UIScale")
+trackerConfigScale.Name = "PromptScale"
+trackerConfigScale.Scale = 1
+trackerConfigScale.Parent = trackerConfigPrompt
+
+trackerConfigTitle = makeStatusLabel(trackerConfigPrompt, 18, 14, 260)
+trackerConfigTitle.Text = "Tracker Whitelist"
+trackerConfigTitle.TextColor3 = THEME.white
+trackerConfigTitle.TextSize = 18
+trackerConfigTitle.Font = Enum.Font.GothamBold
+trackerConfigTitle.ZIndex = 21
+
+trackerConfigHint = makeStatusLabel(trackerConfigPrompt, 18, 42, 300)
+trackerConfigHint.Size = UDim2.new(1, -36, 0, 34)
+trackerConfigHint.TextWrapped = true
+trackerConfigHint.Text = "Add ore names here. Tracker ESP renders only the closest match for each whitelisted ore."
+trackerConfigHint.TextColor3 = THEME.white
+trackerConfigHint.ZIndex = 21
+
+trackerWhitelistList = Instance.new("ScrollingFrame")
+trackerWhitelistList.Size = UDim2.new(1, -36, 0, 108)
+trackerWhitelistList.Position = UDim2.new(0, 18, 0, 84)
+trackerWhitelistList.BackgroundColor3 = THEME.panelAlt
+trackerWhitelistList.BorderSizePixel = 0
+trackerWhitelistList.ScrollBarThickness = 4
+trackerWhitelistList.CanvasSize = UDim2.new(0, 0, 0, 0)
+trackerWhitelistList.ZIndex = 21
+trackerWhitelistList.Parent = trackerConfigPrompt
+addCorner(trackerWhitelistList, 12)
+addStroke(trackerWhitelistList, THEME.border, 2)
+trackerWhitelistLayout = Instance.new("UIListLayout")
+trackerWhitelistLayout.Padding = UDim.new(0, 6)
+trackerWhitelistLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
+trackerWhitelistLayout.Parent = trackerWhitelistList
+
+trackerWhitelistInput = makeInput(trackerConfigPrompt, "Ore to track", 18, 204, 176)
+trackerWhitelistInput.ZIndex = 21
+trackerWhitelistAddBtn = makeActionButton(trackerConfigPrompt, "Add", 204, 204, 62, THEME.success)
+trackerWhitelistAddBtn.ZIndex = 21
+trackerWhitelistCloseBtn = makeActionButton(trackerConfigPrompt, "Close", 276, 204, 50, THEME.panelAlt)
+trackerWhitelistCloseBtn.ZIndex = 21
+trackerWhitelistStatus = makeStatusLabel(trackerConfigPrompt, 18, 238, 300)
+trackerWhitelistStatus.ZIndex = 21
+
 partColorRows = {}
 blacklistRows = {}
+trackerWhitelistRows = {}
 selectedTracerName = nil
 refreshAllAppearances = nil
 rebuildPartColorList = nil
 rebuildBlacklistList = nil
+rebuildTrackerWhitelistList = nil
 openTracerEditPrompt = nil
+openTrackerConfigPrompt = nil
 
 function refreshUiInputs()
     radiusInput.Text = tostring(CONFIG.radius)

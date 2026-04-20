@@ -33,7 +33,18 @@ function applyConfigPayload(payload)
             end
         end
     end
+    if typeof(payload.trackerWhitelist) == "table" then
+        CONFIG.trackerWhitelist = {}
+        for _, oreName in ipairs(payload.trackerWhitelist) do
+            if typeof(oreName) == "string" and trim(oreName) ~= "" then
+                table.insert(CONFIG.trackerWhitelist, trim(oreName))
+            end
+        end
+    end
     refreshUiInputs()
+    if rebuildTrackerWhitelistList then
+        rebuildTrackerWhitelistList()
+    end
     requestTargetRefresh()
     return true, "Config loaded."
 end
@@ -115,9 +126,16 @@ end
 function applyPartColorPayload(partColors)
     CONFIG.partColors = {}
     CONFIG.partThickness = {}
+    CONFIG.trackerWhitelist = {}
 
     for partName, value in pairs(partColors) do
-        if typeof(partName) == "string" then
+        if partName == "__trackerWhitelist" and typeof(value) == "table" and typeof(value.whitelist) == "table" then
+            for _, oreName in ipairs(value.whitelist) do
+                if typeof(oreName) == "string" and trim(oreName) ~= "" then
+                    table.insert(CONFIG.trackerWhitelist, trim(oreName))
+                end
+            end
+        elseif typeof(partName) == "string" then
             local hex = nil
             local thickness = nil
 
@@ -149,6 +167,9 @@ function buildPartColorPayload()
             thickness = CONFIG.partThickness[partName] or CONFIG.screenLineThickness,
         }
     end
+    payload.__trackerWhitelist = {
+        whitelist = CONFIG.trackerWhitelist,
+    }
     return payload
 end
 
@@ -210,7 +231,7 @@ function saveConfig()
         end
     end
 
-    return true, "Saved config + blacklist to Supabase."
+    return true, "Saved config, blacklist, and tracker whitelist to Supabase."
 end
 
 function loadConfig()
@@ -269,6 +290,9 @@ function loadConfig()
     applyGuiSettings()
     rebuildPartColorList()
     rebuildBlacklistList()
+    if rebuildTrackerWhitelistList then
+        rebuildTrackerWhitelistList()
+    end
     refreshAllAppearances()
     requestTargetRefresh()
 
@@ -369,6 +393,9 @@ refreshAllAppearances = function()
     defaultColorInput.Text = colorToHex(CONFIG.defaultColor)
     accentHex.Text = "#" .. colorToHex(CONFIG.defaultColor) .. " click square to change"
     for _, entry in pairs(trackedParts) do
+        refreshEntryAppearance(entry)
+    end
+    for _, entry in pairs(trackerEntries) do
         refreshEntryAppearance(entry)
     end
 end

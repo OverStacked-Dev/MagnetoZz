@@ -49,6 +49,7 @@ CONFIG = {
         Crystal = Color3.fromRGB(180, 0, 255),
     },
     partThickness = {},
+    trackerWhitelist = {},
 }
 
 GUI_SETTINGS = {
@@ -65,15 +66,17 @@ VERSION_URL = "https://raw.githubusercontent.com/OverStacked-Dev/MagnetoZz/main/
 SUPABASE_URL = "https://xvdrhzgfjjsmosjlwtwr.supabase.co"
 SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh2ZHJoemdmampzbW9zamx3dHdyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY2MTI4NzksImV4cCI6MjA5MjE4ODg3OX0.NuJXJsJ_fAgaOKD_l-ZSwlIIAVDPJiZhPbIDRQ1rWas"
 APP_VERSION = "v1.0.0"
-FINAL_SIZE = UDim2.new(0, 800, 0, 456)
+FINAL_SIZE = UDim2.new(0, 800, 0, 500)
 FINAL_POSITION = UDim2.new(0.5, 0, 0.5, 0)
 
 espEnabled = false
-trackerWipEnabled = false
+trackerEnabled = false
 destroyed = false
 currentPage = "esp"
 trackedParts = {}
 activeEntries = {}
+trackerEntries = {}
+trackerActiveEntries = {}
 connections = {}
 heartbeatAccumulator = 0
 targetRefreshAccumulator = 999
