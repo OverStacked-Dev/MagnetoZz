@@ -1,4 +1,4 @@
-﻿-- MagnetoZz modular chunk: 05_esp.lua -- Generated from MagnetoZz.lua. Edit the source carefully or regenerate chunks. 
+-- MagnetoZz modular chunk: 05_esp.lua -- Generated from MagnetoZz.lua. Edit the source carefully or regenerate chunks. 
 function setEntryVisible(entry, visible)
     if visible then
         ensureEntryVisuals(entry)

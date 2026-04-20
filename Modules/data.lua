@@ -1,4 +1,4 @@
-﻿-- MagnetoZz modular chunk: 04_data.lua -- Generated from MagnetoZz.lua. Edit the source carefully or regenerate chunks. 
+-- MagnetoZz modular chunk: 04_data.lua -- Generated from MagnetoZz.lua. Edit the source carefully or regenerate chunks. 
 function applyConfigPayload(payload)
     if typeof(payload) ~= "table" then
         return false, "Config invalid."

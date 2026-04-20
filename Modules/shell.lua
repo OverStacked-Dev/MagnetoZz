@@ -1,4 +1,4 @@
-﻿-- MagnetoZz modular chunk: 02_shell.lua -- Generated from MagnetoZz.lua. Edit the source carefully or regenerate chunks. 
+-- MagnetoZz modular chunk: 02_shell.lua -- Generated from MagnetoZz.lua. Edit the source carefully or regenerate chunks. 
 screenGui = Instance.new("ScreenGui")
 screenGui.Name = "MagnetoZzGui"
 screenGui.ResetOnSpawn = false

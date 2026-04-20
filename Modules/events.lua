@@ -1,4 +1,4 @@
-﻿-- MagnetoZz modular chunk: 06_events.lua -- Generated from MagnetoZz.lua. Edit the source carefully or regenerate chunks. 
+-- MagnetoZz modular chunk: 06_events.lua -- Generated from MagnetoZz.lua. Edit the source carefully or regenerate chunks. 
 function showPage(pageName)
     currentPage = pageName
     for name, page in pairs(pages) do

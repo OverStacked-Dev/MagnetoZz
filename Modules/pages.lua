@@ -1,4 +1,4 @@
-﻿-- MagnetoZz modular chunk: 03_pages.lua -- Generated from MagnetoZz.lua. Edit the source carefully or regenerate chunks. 
+-- MagnetoZz modular chunk: 03_pages.lua -- Generated from MagnetoZz.lua. Edit the source carefully or regenerate chunks. 
 espPage = makePage("esp")
 configPage = makePage("config")
 blacklistPage = makePage("blacklist")
