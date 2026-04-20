@@ -46,6 +46,9 @@ end
 statusPill, statusText, statusDot = makeTopPill(172, "Opened")
 espPill, espPillText, espPillDot = makeTopPill(274, "ESP OFF")
 espPill.BackgroundColor3 = THEME.danger
+trackerPill, trackerPillText, trackerPillDot = makeTopPill(376, "Tracker OFF")
+trackerPill.Size = UDim2.new(0, 118, 0, 26)
+trackerPill.BackgroundColor3 = THEME.danger
 
 guiScale = Instance.new("UIScale")
 guiScale.Scale = 1
@@ -383,6 +386,18 @@ function updateEspPill()
         espPill.BackgroundColor3 = THEME.danger
         espPillDot.BackgroundColor3 = Color3.fromRGB(255, 224, 224)
         espPillText.Text = "ESP OFF"
+    end
+end
+
+function updateTrackerPill()
+    if trackerEnabled then
+        trackerPill.BackgroundColor3 = THEME.success
+        trackerPillDot.BackgroundColor3 = Color3.fromRGB(218, 255, 232)
+        trackerPillText.Text = "Tracker ON"
+    else
+        trackerPill.BackgroundColor3 = THEME.danger
+        trackerPillDot.BackgroundColor3 = Color3.fromRGB(255, 224, 224)
+        trackerPillText.Text = "Tracker OFF"
     end
 end
 

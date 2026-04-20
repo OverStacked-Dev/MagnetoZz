@@ -92,6 +92,7 @@ function setTrackerState(enabled)
         setStatus(trackerStatus, "Tracker disabled. Whitelist stays saved.", THEME.muted)
         hideTrackerEntries()
     end
+    updateTrackerPill()
 end
 
 function updateTrackerEntry(entry, playerPos)

@@ -135,6 +135,8 @@ function applyPartColorPayload(partColors)
                     table.insert(CONFIG.trackerWhitelist, trim(oreName))
                 end
             end
+        elseif partName == "__guiSettings" and typeof(value) == "table" then
+            applyGuiSettingsPayload(value)
         elseif typeof(partName) == "string" then
             local hex = nil
             local thickness = nil
@@ -159,6 +161,66 @@ function applyPartColorPayload(partColors)
     end
 end
 
+function buildGuiSettingsPayload()
+    return {
+        accentColor = colorToHex(GUI_SETTINGS.accentColor),
+        titleTextSize = GUI_SETTINGS.titleTextSize,
+        bodyTextSize = GUI_SETTINGS.bodyTextSize,
+        buttonTextSize = GUI_SETTINGS.buttonTextSize,
+        animationsEnabled = GUI_SETTINGS.animationsEnabled,
+        toggleKey = GUI_SETTINGS.toggleKey.Name,
+        espToggleKey = GUI_SETTINGS.espToggleKey.Name,
+        trackerToggleKey = GUI_SETTINGS.trackerToggleKey.Name,
+    }
+end
+
+function applyGuiSettingsPayload(payload)
+    if typeof(payload) ~= "table" then
+        return
+    end
+
+    if typeof(payload.accentColor) == "string" then
+        local loadedAccent = colorFromHex(payload.accentColor)
+        if loadedAccent then
+            GUI_SETTINGS.accentColor = loadedAccent
+        end
+    end
+
+    if typeof(payload.titleTextSize) == "number" then
+        GUI_SETTINGS.titleTextSize = math.clamp(payload.titleTextSize, 20, 34)
+    end
+    if typeof(payload.bodyTextSize) == "number" then
+        GUI_SETTINGS.bodyTextSize = math.clamp(payload.bodyTextSize, 11, 18)
+    end
+    if typeof(payload.buttonTextSize) == "number" then
+        GUI_SETTINGS.buttonTextSize = math.clamp(payload.buttonTextSize, 14, 20)
+    else
+        GUI_SETTINGS.buttonTextSize = math.clamp(GUI_SETTINGS.bodyTextSize + 4, 14, 20)
+    end
+    if typeof(payload.animationsEnabled) == "boolean" then
+        GUI_SETTINGS.animationsEnabled = payload.animationsEnabled
+    end
+
+    if typeof(payload.toggleKey) == "string" then
+        local loadedKey = keyCodeFromText(payload.toggleKey)
+        if loadedKey then
+            GUI_SETTINGS.toggleKey = loadedKey
+        end
+    end
+    if typeof(payload.espToggleKey) == "string" then
+        local loadedKey = keyCodeFromText(payload.espToggleKey)
+        if loadedKey then
+            GUI_SETTINGS.espToggleKey = loadedKey
+        end
+    end
+    if typeof(payload.trackerToggleKey) == "string" then
+        local loadedKey = keyCodeFromText(payload.trackerToggleKey)
+        if loadedKey then
+            GUI_SETTINGS.trackerToggleKey = loadedKey
+        end
+    end
+end
+
 function buildPartColorPayload()
     local payload = {}
     for partName, color in pairs(CONFIG.partColors) do
@@ -170,6 +232,7 @@ function buildPartColorPayload()
     payload.__trackerWhitelist = {
         whitelist = CONFIG.trackerWhitelist,
     }
+    payload.__guiSettings = buildGuiSettingsPayload()
     return payload
 end
 
@@ -263,6 +326,9 @@ function loadConfig()
             if loadedAccent then
                 GUI_SETTINGS.accentColor = loadedAccent
             end
+        end
+        if typeof(config.gui_settings) == "table" then
+            applyGuiSettingsPayload(config.gui_settings)
         end
         if typeof(config.part_colors) == "table" then
             applyPartColorPayload(config.part_colors)

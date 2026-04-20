@@ -236,6 +236,8 @@ connect(UserInputService.InputBegan, function(input, gameProcessed)
         end)
     elseif input.KeyCode == GUI_SETTINGS.espToggleKey then
         setEspState(not espEnabled)
+    elseif input.KeyCode == GUI_SETTINGS.trackerToggleKey then
+        setTrackerState(not trackerEnabled)
     end
 end)
 
@@ -247,6 +249,10 @@ end)
 
 connect(espPill.MouseButton1Click, function()
     setEspState(not espEnabled)
+end)
+
+connect(trackerPill.MouseButton1Click, function()
+    setTrackerState(not trackerEnabled)
 end)
 
 connect(espToggleBtn.MouseButton1Click, function()
@@ -289,6 +295,7 @@ connect(guiApplyBtn.MouseButton1Click, function()
     local bodySize = tonumber(trim(guiBodySizeInput.Text))
     local toggleKey = keyCodeFromText(guiKeybindInput.Text)
     local espToggleKey = keyCodeFromText(guiEspKeybindInput.Text)
+    local trackerToggleKey = keyCodeFromText(guiTrackerKeybindInput.Text)
 
     if not accentColor then
         setStatus(guiStatus, "GUI accent HEX is invalid.", THEME.danger)
@@ -305,12 +312,18 @@ connect(guiApplyBtn.MouseButton1Click, function()
         return
     end
 
+    if not trackerToggleKey then
+        setStatus(guiStatus, "Tracker toggle key is invalid.", THEME.danger)
+        return
+    end
+
     GUI_SETTINGS.accentColor = accentColor
     GUI_SETTINGS.titleTextSize = math.clamp(titleSize or GUI_SETTINGS.titleTextSize, 20, 34)
     GUI_SETTINGS.bodyTextSize = math.clamp(bodySize or GUI_SETTINGS.bodyTextSize, 11, 18)
     GUI_SETTINGS.buttonTextSize = math.clamp(GUI_SETTINGS.bodyTextSize + 4, 14, 20)
     GUI_SETTINGS.toggleKey = toggleKey
     GUI_SETTINGS.espToggleKey = espToggleKey
+    GUI_SETTINGS.trackerToggleKey = trackerToggleKey
     applyGuiSettings()
     refreshUiInputs()
     setStatus(guiStatus, "GUI settings applied.", THEME.success)
@@ -324,6 +337,7 @@ connect(guiResetBtn.MouseButton1Click, function()
     GUI_SETTINGS.animationsEnabled = true
     GUI_SETTINGS.toggleKey = Enum.KeyCode.RightShift
     GUI_SETTINGS.espToggleKey = Enum.KeyCode.RightControl
+    GUI_SETTINGS.trackerToggleKey = Enum.KeyCode.RightAlt
     applyGuiSettings()
     refreshUiInputs()
     setStatus(guiStatus, "GUI settings reset.", THEME.success)
@@ -446,6 +460,7 @@ fetchVersion()
 sidebarVersion.Text = APP_VERSION .. " | By OverStacked-Dev"
 updateStatusPill()
 updateEspPill()
+updateTrackerPill()
 rebuildPartColorList()
 rebuildBlacklistList()
 rebuildTrackerWhitelistList()

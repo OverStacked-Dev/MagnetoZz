@@ -273,12 +273,15 @@ rebuildPartColorList = function()
         row.Parent = partColorList
         addCorner(row, 10)
         local rowStroke = addStroke(row, THEME.border, 2)
+        rowStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         enableButtonMotion(row, 1.01, 0.98)
         connect(row.MouseEnter, function()
             rowStroke.Color = THEME.white
+            rowStroke.Thickness = 3
         end)
         connect(row.MouseLeave, function()
             rowStroke.Color = THEME.border
+            rowStroke.Thickness = 2
         end)
         local nameLabel = makeStatusLabel(row, 8, 6, 160)
         nameLabel.Text = partName

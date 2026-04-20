@@ -113,8 +113,11 @@ guiKeybindInput.Text = GUI_SETTINGS.toggleKey.Name
 makeLabel(guiMainSection, "ESP Toggle Key", 160, 102, 120)
 guiEspKeybindInput = makeInput(guiMainSection, "RightControl", 160, 122, 130)
 guiEspKeybindInput.Text = GUI_SETTINGS.espToggleKey.Name
-guiApplyBtn = makeActionButton(guiMainSection, "Apply GUI", 310, 122, 120, THEME.accent)
-guiResetBtn = makeActionButton(guiMainSection, "Reset GUI", 442, 122, 100, THEME.panelAlt)
+makeLabel(guiMainSection, "Tracker Key", 308, 102, 110)
+guiTrackerKeybindInput = makeInput(guiMainSection, "RightAlt", 308, 122, 116)
+guiTrackerKeybindInput.Text = GUI_SETTINGS.trackerToggleKey.Name
+guiApplyBtn = makeActionButton(guiMainSection, "Apply GUI", 438, 122, 104, THEME.accent)
+guiResetBtn = makeActionButton(guiMainSection, "Reset GUI", 438, 82, 104, THEME.panelAlt)
 guiStatus = makeStatusLabel(guiMainSection, 12, 166, 470)
 
 guiExtraSection = makeSection(guiPage, "What Changes", 206, 96)
@@ -295,6 +298,7 @@ function refreshUiInputs()
     guiBodySizeInput.Text = tostring(GUI_SETTINGS.bodyTextSize)
     guiKeybindInput.Text = GUI_SETTINGS.toggleKey.Name
     guiEspKeybindInput.Text = GUI_SETTINGS.espToggleKey.Name
+    guiTrackerKeybindInput.Text = GUI_SETTINGS.trackerToggleKey.Name
     guiAnimationToggle.Text = GUI_SETTINGS.animationsEnabled and "Animations: ON" or "Animations: OFF"
     guiAnimationToggle.BackgroundColor3 = GUI_SETTINGS.animationsEnabled and THEME.success or THEME.danger
 end

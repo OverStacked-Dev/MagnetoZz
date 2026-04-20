@@ -60,6 +60,7 @@ GUI_SETTINGS = {
     animationsEnabled = true,
     toggleKey = Enum.KeyCode.RightShift,
     espToggleKey = Enum.KeyCode.RightControl,
+    trackerToggleKey = Enum.KeyCode.RightAlt,
 }
 
 VERSION_URL = "https://raw.githubusercontent.com/OverStacked-Dev/MagnetoZz/main/version.json"
