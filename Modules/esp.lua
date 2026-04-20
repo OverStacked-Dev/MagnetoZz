@@ -120,6 +120,7 @@ function updateEntry(entry, playerPos)
 
         entry.drawLine.From = Vector2.new(fromScreen.X, fromScreen.Y)
         entry.drawLine.To = Vector2.new(toScreen.X, toScreen.Y)
+        entry.drawLine.Thickness = getTracerThickness(part.Name)
         entry.drawText.Position = Vector2.new(labelScreen.X, labelScreen.Y - 12)
         entry.drawText.Size = math.max(12, GUI_SETTINGS.bodyTextSize + 1)
         setEntryVisible(entry, true)
@@ -128,7 +129,8 @@ function updateEntry(entry, playerPos)
 
     local midpoint = fromPos + direction / 2
     local labelOffset = math.min(CONFIG.labelDistance, math.max(2, distance * 0.25))
-    entry.line.Size = Vector3.new(CONFIG.lineThickness, CONFIG.lineThickness, distance)
+    local worldThickness = getWorldTracerThickness(part.Name)
+    entry.line.Size = Vector3.new(worldThickness, worldThickness, distance)
     entry.line.CFrame = CFrame.lookAt(midpoint, toPos)
     entry.anchor.CFrame = CFrame.new(fromPos + direction.Unit * labelOffset)
     setEntryVisible(entry, true)
@@ -267,20 +269,28 @@ rebuildPartColorList = function()
         row.Text = ""
         row.Parent = partColorList
         addCorner(row, 10)
-        addStroke(row, THEME.border, 2)
+        local rowStroke = addStroke(row, THEME.border, 2)
         enableButtonMotion(row, 1.01, 0.98)
-        local nameLabel = makeStatusLabel(row, 8, 6, 185)
+        connect(row.MouseEnter, function()
+            rowStroke.Color = THEME.white
+        end)
+        connect(row.MouseLeave, function()
+            rowStroke.Color = THEME.border
+        end)
+        local nameLabel = makeStatusLabel(row, 8, 6, 160)
         nameLabel.Text = partName
         nameLabel.TextColor3 = THEME.white
         local swatch = Instance.new("Frame")
         swatch.Size = UDim2.new(0, 18, 0, 18)
-        swatch.Position = UDim2.new(0, 204, 0.5, -9)
+        swatch.Position = UDim2.new(0, 184, 0.5, -9)
         swatch.BackgroundColor3 = color
         swatch.BorderSizePixel = 0
         swatch.Parent = row
         addCorner(swatch, 6)
-        local hexLabel = makeStatusLabel(row, 230, 6, 78)
+        local hexLabel = makeStatusLabel(row, 210, 6, 78)
         hexLabel.Text = "#" .. colorToHex(color)
+        local thicknessLabel = makeStatusLabel(row, 308, 6, 100)
+        thicknessLabel.Text = "thick " .. tostring(CONFIG.partThickness[partName] or CONFIG.screenLineThickness)
         connect(row.MouseButton1Click, function()
             if openTracerEditPrompt then
                 openTracerEditPrompt(partName)

@@ -94,6 +94,7 @@ openTracerEditPrompt = function(oreName)
     tracerEditTitle.Text = "Edit " .. oreName
     tracerEditNameInput.Text = oreName
     tracerEditColorInput.Text = color and colorToHex(color) or colorToHex(CONFIG.defaultColor)
+    tracerEditThicknessInput.Text = tostring(CONFIG.partThickness[oreName] or CONFIG.screenLineThickness)
     tracerEditStatus.Text = ""
     tracerEditPrompt.Visible = true
 
@@ -132,6 +133,7 @@ connect(tracerSaveBtn.MouseButton1Click, function()
 
     local newName = trim(tracerEditNameInput.Text)
     local loadedColor = colorFromHex(tracerEditColorInput.Text)
+    local thickness = tonumber(trim(tracerEditThicknessInput.Text))
     if newName == "" then
         setStatus(tracerEditStatus, "Ore name required.", THEME.danger)
         return
@@ -140,14 +142,15 @@ connect(tracerSaveBtn.MouseButton1Click, function()
         setStatus(tracerEditStatus, "Color HEX is invalid.", THEME.danger)
         return
     end
+    if not thickness then
+        setStatus(tracerEditStatus, "Thickness must be a number.", THEME.danger)
+        return
+    end
 
-    local oldThickness = CONFIG.partThickness[selectedTracerName]
     CONFIG.partColors[selectedTracerName] = nil
     CONFIG.partThickness[selectedTracerName] = nil
     CONFIG.partColors[newName] = loadedColor
-    if oldThickness then
-        CONFIG.partThickness[newName] = oldThickness
-    end
+    CONFIG.partThickness[newName] = math.clamp(thickness, 0.5, 12)
 
     rebuildPartColorList()
     refreshAllAppearances()

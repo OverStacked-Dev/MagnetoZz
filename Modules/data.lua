@@ -24,13 +24,12 @@ function applyConfigPayload(payload)
         end
     end
     if typeof(payload.partColors) == "table" then
-        CONFIG.partColors = {}
-        for partName, hex in pairs(payload.partColors) do
-            if typeof(partName) == "string" and typeof(hex) == "string" then
-                local loadedColor = colorFromHex(hex)
-                if loadedColor then
-                    CONFIG.partColors[partName] = loadedColor
-                end
+        applyPartColorPayload(payload.partColors)
+    end
+    if typeof(payload.partThickness) == "table" then
+        for partName, thickness in pairs(payload.partThickness) do
+            if typeof(partName) == "string" and tonumber(thickness) then
+                CONFIG.partThickness[partName] = math.clamp(tonumber(thickness), 0.5, 12)
             end
         end
     end
@@ -113,10 +112,42 @@ function supabaseRequest(method, path, body, prefer)
     return true, decoded
 end
 
+function applyPartColorPayload(partColors)
+    CONFIG.partColors = {}
+    CONFIG.partThickness = {}
+
+    for partName, value in pairs(partColors) do
+        if typeof(partName) == "string" then
+            local hex = nil
+            local thickness = nil
+
+            if typeof(value) == "string" then
+                hex = value
+            elseif typeof(value) == "table" then
+                hex = value.color or value.hex
+                thickness = tonumber(value.thickness)
+            end
+
+            if typeof(hex) == "string" then
+                local loadedColor = colorFromHex(hex)
+                if loadedColor then
+                    CONFIG.partColors[partName] = loadedColor
+                    if thickness then
+                        CONFIG.partThickness[partName] = math.clamp(thickness, 0.5, 12)
+                    end
+                end
+            end
+        end
+    end
+end
+
 function buildPartColorPayload()
     local payload = {}
     for partName, color in pairs(CONFIG.partColors) do
-        payload[partName] = colorToHex(color)
+        payload[partName] = {
+            color = colorToHex(color),
+            thickness = CONFIG.partThickness[partName] or CONFIG.screenLineThickness,
+        }
     end
     return payload
 end
@@ -213,15 +244,7 @@ function loadConfig()
             end
         end
         if typeof(config.part_colors) == "table" then
-            CONFIG.partColors = {}
-            for partName, hex in pairs(config.part_colors) do
-                if typeof(partName) == "string" and typeof(hex) == "string" then
-                    local loadedColor = colorFromHex(hex)
-                    if loadedColor then
-                        CONFIG.partColors[partName] = loadedColor
-                    end
-                end
-            end
+            applyPartColorPayload(config.part_colors)
         end
     end
 
@@ -326,7 +349,7 @@ function refreshEntryAppearance(entry)
     local color = getColor(entry.part.Name)
     if entry.drawLine then
         entry.drawLine.Color = color
-        entry.drawLine.Thickness = CONFIG.screenLineThickness
+        entry.drawLine.Thickness = getTracerThickness(entry.part.Name)
     end
     if entry.drawText then
         entry.drawText.Text = entry.part.Name

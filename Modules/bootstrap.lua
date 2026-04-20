@@ -285,6 +285,17 @@ function getColor(partName)
     return CONFIG.partColors[partName] or CONFIG.defaultColor
 end
 
+function getTracerThickness(partName)
+    local thickness = tonumber(CONFIG.partThickness and CONFIG.partThickness[partName]) or CONFIG.screenLineThickness
+    return math.clamp(thickness, 0.5, 12)
+end
+
+function getWorldTracerThickness(partName)
+    local screenThickness = getTracerThickness(partName)
+    local scale = CONFIG.lineThickness / CONFIG.screenLineThickness
+    return math.clamp(screenThickness * scale, 0.02, 1)
+end
+
 function createLinePart()
     local line = Instance.new("Part")
     line.Name = "MagnetoLine"

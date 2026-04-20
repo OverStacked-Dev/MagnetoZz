@@ -173,7 +173,7 @@ lineColorPromptStatus = makeStatusLabel(lineColorPrompt, 18, 132, 250)
 lineColorPromptStatus.ZIndex = 21
 
 tracerEditPrompt = Instance.new("Frame")
-tracerEditPrompt.Size = UDim2.new(0, 320, 0, 194)
+tracerEditPrompt.Size = UDim2.new(0, 340, 0, 224)
 tracerEditPrompt.AnchorPoint = Vector2.new(0.5, 0.5)
 tracerEditPrompt.Position = UDim2.new(0.5, 0, 0.5, 0)
 tracerEditPrompt.BackgroundColor3 = THEME.panel
@@ -197,20 +197,25 @@ tracerEditTitle.ZIndex = 21
 
 tracerEditNameLabel = makeLabel(tracerEditPrompt, "Ore Name", 18, 48, 100)
 tracerEditNameLabel.ZIndex = 21
-tracerEditNameInput = makeInput(tracerEditPrompt, "Ore Name", 18, 68, 132)
+tracerEditNameInput = makeInput(tracerEditPrompt, "Ore Name", 18, 68, 142)
 tracerEditNameInput.ZIndex = 21
-tracerEditColorLabel = makeLabel(tracerEditPrompt, "Color", 168, 48, 80)
+tracerEditColorLabel = makeLabel(tracerEditPrompt, "Color", 178, 48, 80)
 tracerEditColorLabel.ZIndex = 21
-tracerEditColorInput = makeInput(tracerEditPrompt, "Color", 168, 68, 92)
+tracerEditColorInput = makeInput(tracerEditPrompt, "Color", 178, 68, 110)
 tracerEditColorInput.ZIndex = 21
 
-tracerSaveBtn = makeActionButton(tracerEditPrompt, "Save", 18, 116, 74, THEME.success)
+tracerEditThicknessLabel = makeLabel(tracerEditPrompt, "Thickness", 18, 106, 100)
+tracerEditThicknessLabel.ZIndex = 21
+tracerEditThicknessInput = makeInput(tracerEditPrompt, "Thickness", 18, 126, 110)
+tracerEditThicknessInput.ZIndex = 21
+
+tracerSaveBtn = makeActionButton(tracerEditPrompt, "Save", 18, 166, 74, THEME.success)
 tracerSaveBtn.ZIndex = 21
-tracerCancelBtn = makeActionButton(tracerEditPrompt, "Cancel", 104, 116, 82, THEME.panelAlt)
+tracerCancelBtn = makeActionButton(tracerEditPrompt, "Cancel", 104, 166, 82, THEME.panelAlt)
 tracerCancelBtn.ZIndex = 21
-tracerDeleteBtn = makeActionButton(tracerEditPrompt, "Delete", 198, 116, 82, THEME.danger)
+tracerDeleteBtn = makeActionButton(tracerEditPrompt, "Delete", 198, 166, 82, THEME.danger)
 tracerDeleteBtn.ZIndex = 21
-tracerEditStatus = makeStatusLabel(tracerEditPrompt, 18, 158, 280)
+tracerEditStatus = makeStatusLabel(tracerEditPrompt, 18, 200, 300)
 tracerEditStatus.ZIndex = 21
 
 partColorRows = {}
