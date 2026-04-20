@@ -130,6 +130,8 @@ connect(tracerDeleteBtn.MouseButton1Click, function()
     CONFIG.partThickness[deletedName] = nil
     rebuildPartColorList()
     refreshAllAppearances()
+    hideTrackerEntries()
+    requestTargetRefresh()
     setStatus(partColorStatus, "Deleted tracer for " .. deletedName, THEME.muted)
     closeTracerEditPrompt()
 end)
@@ -161,6 +163,7 @@ connect(tracerSaveBtn.MouseButton1Click, function()
 
     rebuildPartColorList()
     refreshAllAppearances()
+    hideTrackerEntries()
     requestTargetRefresh()
     setStatus(partColorStatus, "Updated tracer for " .. newName, THEME.success)
     closeTracerEditPrompt()
@@ -169,6 +172,7 @@ end)
 openTrackerConfigPrompt = function()
     trackerWhitelistStatus.Text = ""
     trackerWhitelistInput.Text = ""
+    refreshUiInputs()
     rebuildTrackerWhitelistList()
     trackerConfigPrompt.Visible = true
 
@@ -186,6 +190,39 @@ function closeTrackerConfigPrompt()
 end
 
 connect(trackerWhitelistCloseBtn.MouseButton1Click, closeTrackerConfigPrompt)
+connect(trackerAutoTraceBtn.MouseButton1Click, function()
+    CONFIG.trackerTraceUnlisted = not CONFIG.trackerTraceUnlisted
+    refreshUiInputs()
+    hideTrackerEntries()
+    requestTargetRefresh()
+    if CONFIG.trackerTraceUnlisted then
+        setStatus(trackerWhitelistStatus, "Auto-trace enabled for unlisted or thick MTS ores.", THEME.success)
+        if trackerEnabled then
+            setStatus(trackerStatus, "Tracker enabled. Auto-tracing unlisted/thick MTS ores.", THEME.white)
+        end
+    else
+        setStatus(trackerWhitelistStatus, "Auto-trace disabled. Whitelist only.", THEME.muted)
+        if trackerEnabled then
+            setStatus(trackerStatus, "Tracker enabled for " .. tostring(#CONFIG.trackerWhitelist) .. " whitelisted ores.", THEME.white)
+        end
+    end
+end)
+connect(trackerMinThicknessApplyBtn.MouseButton1Click, function()
+    local thickness = tonumber(trim(trackerMinThicknessInput.Text))
+    if not thickness then
+        setStatus(trackerWhitelistStatus, "Minimum thickness must be a number.", THEME.danger)
+        return
+    end
+
+    CONFIG.trackerMinRecognizedThickness = math.clamp(thickness, 0.5, 12)
+    trackerMinThicknessInput.Text = tostring(CONFIG.trackerMinRecognizedThickness)
+    hideTrackerEntries()
+    requestTargetRefresh()
+    setStatus(trackerWhitelistStatus, "Minimum recognized thickness updated.", THEME.success)
+    if trackerEnabled and CONFIG.trackerTraceUnlisted then
+        setStatus(trackerStatus, "Tracker enabled. Auto-tracing unlisted/thick MTS ores.", THEME.white)
+    end
+end)
 connect(trackerWhitelistAddBtn.MouseButton1Click, function()
     local oreName = trim(trackerWhitelistInput.Text)
     if oreName == "" then
@@ -204,6 +241,10 @@ connect(trackerWhitelistAddBtn.MouseButton1Click, function()
     else
         setStatus(trackerWhitelistStatus, oreName .. " already tracked.", THEME.muted)
     end
+end)
+
+connect(mtsSearchInput:GetPropertyChangedSignal("Text"), function()
+    rebuildPartColorList()
 end)
 
 connect(dragHandle.InputBegan, function(input)
@@ -366,6 +407,8 @@ connect(addColorBtn.MouseButton1Click, function()
     addThicknessInput.Text = tostring(CONFIG.screenLineThickness)
     rebuildPartColorList()
     refreshAllAppearances()
+    hideTrackerEntries()
+    requestTargetRefresh()
     setStatus(partColorStatus, "Tracer saved for " .. partName, THEME.success)
 end)
 

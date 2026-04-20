@@ -6,16 +6,50 @@ screenGui.IgnoreGuiInset = true
 screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 screenGui.Parent = playerGui
 
-function makeTopPill(x, text)
+statusDockOpen = true
+statusDockOpenWidth = 376
+statusDockClosedWidth = 42
+
+statusDock = Instance.new("Frame")
+statusDock.Size = UDim2.new(0, statusDockOpenWidth, 0, 34)
+statusDock.Position = UDim2.new(0, 158, 0, 14)
+statusDock.BackgroundColor3 = Color3.fromRGB(13, 15, 22)
+statusDock.BackgroundTransparency = 0.06
+statusDock.BorderSizePixel = 0
+statusDock.ClipsDescendants = true
+statusDock.ZIndex = 6
+statusDock.Parent = screenGui
+addCorner(statusDock, 18)
+addStroke(statusDock, Color3.fromRGB(23, 27, 38), 2)
+
+statusDockArrow = Instance.new("TextButton")
+statusDockArrow.Size = UDim2.new(0, 28, 0, 26)
+statusDockArrow.Position = UDim2.new(0, 6, 0, 4)
+statusDockArrow.AutoButtonColor = false
+statusDockArrow.BackgroundColor3 = Color3.fromRGB(25, 29, 40)
+statusDockArrow.BackgroundTransparency = 0.02
+statusDockArrow.BorderSizePixel = 0
+statusDockArrow.Text = "<"
+statusDockArrow.TextColor3 = THEME.white
+statusDockArrow.TextSize = 14
+statusDockArrow.Font = Enum.Font.GothamBold
+statusDockArrow.ZIndex = 7
+statusDockArrow.Parent = statusDock
+addCorner(statusDockArrow, 14)
+addStroke(statusDockArrow, Color3.fromRGB(18, 22, 32), 2)
+enableButtonMotion(statusDockArrow, 1.05, 0.92)
+
+function makeTopPill(x, text, width)
     local pill = Instance.new("TextButton")
-    pill.Size = UDim2.new(0, 96, 0, 26)
-    pill.Position = UDim2.new(0, x, 0, 18)
+    pill.Size = UDim2.new(0, width or 96, 0, 26)
+    pill.Position = UDim2.new(0, x, 0, 4)
     pill.AutoButtonColor = false
     pill.BackgroundColor3 = THEME.success
     pill.BackgroundTransparency = 0.04
     pill.BorderSizePixel = 0
     pill.Text = ""
-    pill.Parent = screenGui
+    pill.ZIndex = 7
+    pill.Parent = statusDock
     addCorner(pill, 14)
     addStroke(pill, Color3.fromRGB(18, 22, 32), 2)
 
@@ -25,6 +59,7 @@ function makeTopPill(x, text)
     dot.BackgroundColor3 = THEME.white
     dot.BackgroundTransparency = 0.05
     dot.BorderSizePixel = 0
+    dot.ZIndex = 8
     dot.Parent = pill
     addCorner(dot, 7)
 
@@ -37,18 +72,43 @@ function makeTopPill(x, text)
     label.TextSize = 12
     label.Font = Enum.Font.GothamBold
     label.TextXAlignment = Enum.TextXAlignment.Left
+    label.ZIndex = 8
     label.Parent = pill
 
     enableButtonMotion(pill, 1.04, 0.94)
     return pill, label, dot
 end
 
-statusPill, statusText, statusDot = makeTopPill(172, "Opened")
-espPill, espPillText, espPillDot = makeTopPill(274, "ESP OFF")
+statusPill, statusText, statusDot = makeTopPill(42, "Opened", 96)
+espPill, espPillText, espPillDot = makeTopPill(142, "ESP OFF", 96)
 espPill.BackgroundColor3 = THEME.danger
-trackerPill, trackerPillText, trackerPillDot = makeTopPill(376, "Tracker OFF")
-trackerPill.Size = UDim2.new(0, 118, 0, 26)
+trackerPill, trackerPillText, trackerPillDot = makeTopPill(242, "Tracker OFF", 118)
 trackerPill.BackgroundColor3 = THEME.danger
+
+function setStatusDockOpen(open)
+    statusDockOpen = open
+    statusDockArrow.Text = open and "<" or ">"
+
+    if open then
+        statusPill.Visible = true
+        espPill.Visible = true
+        trackerPill.Visible = true
+        safeTween(statusDock, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
+            Size = UDim2.new(0, statusDockOpenWidth, 0, 34),
+        })
+    else
+        statusPill.Visible = false
+        espPill.Visible = false
+        trackerPill.Visible = false
+        safeTween(statusDock, TweenInfo.new(0.24, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+            Size = UDim2.new(0, statusDockClosedWidth, 0, 34),
+        })
+    end
+end
+
+connect(statusDockArrow.MouseButton1Click, function()
+    setStatusDockOpen(not statusDockOpen)
+end)
 
 guiScale = Instance.new("UIScale")
 guiScale.Scale = 1

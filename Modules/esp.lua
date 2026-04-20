@@ -264,6 +264,8 @@ rebuildPartColorList = function()
     end
     table.clear(partColorRows)
     for partName, color in pairs(CONFIG.partColors) do
+        local searchText = mtsSearchInput and trim(mtsSearchInput.Text):lower() or ""
+        if searchText == "" or partName:lower():find(searchText, 1, true) then
         local row = Instance.new("TextButton")
         row.Size = UDim2.new(1, -18, 0, 30)
         row.AutoButtonColor = false
@@ -303,6 +305,7 @@ rebuildPartColorList = function()
             end
         end)
         table.insert(partColorRows, row)
+        end
     end
 
     captureGuiTransparency()

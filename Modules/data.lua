@@ -41,6 +41,12 @@ function applyConfigPayload(payload)
             end
         end
     end
+    if typeof(payload.trackerTraceUnlisted) == "boolean" then
+        CONFIG.trackerTraceUnlisted = payload.trackerTraceUnlisted
+    end
+    if typeof(payload.trackerMinRecognizedThickness) == "number" then
+        CONFIG.trackerMinRecognizedThickness = math.clamp(payload.trackerMinRecognizedThickness, 0.5, 12)
+    end
     refreshUiInputs()
     if rebuildTrackerWhitelistList then
         rebuildTrackerWhitelistList()
@@ -134,6 +140,12 @@ function applyPartColorPayload(partColors)
                 if typeof(oreName) == "string" and trim(oreName) ~= "" then
                     table.insert(CONFIG.trackerWhitelist, trim(oreName))
                 end
+            end
+            if typeof(value.traceUnlisted) == "boolean" then
+                CONFIG.trackerTraceUnlisted = value.traceUnlisted
+            end
+            if typeof(value.minRecognizedThickness) == "number" then
+                CONFIG.trackerMinRecognizedThickness = math.clamp(value.minRecognizedThickness, 0.5, 12)
             end
         elseif partName == "__guiSettings" and typeof(value) == "table" then
             applyGuiSettingsPayload(value)
@@ -231,6 +243,8 @@ function buildPartColorPayload()
     end
     payload.__trackerWhitelist = {
         whitelist = CONFIG.trackerWhitelist,
+        traceUnlisted = CONFIG.trackerTraceUnlisted,
+        minRecognizedThickness = CONFIG.trackerMinRecognizedThickness,
     }
     payload.__guiSettings = buildGuiSettingsPayload()
     return payload

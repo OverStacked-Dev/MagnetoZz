@@ -8,6 +8,22 @@ function isTrackerWhitelisted(partName)
     return false
 end
 
+function trackerShouldTrace(partName)
+    if isTrackerWhitelisted(partName) then
+        return true
+    end
+
+    if not CONFIG.trackerTraceUnlisted or isIgnored(partName) then
+        return false
+    end
+
+    if CONFIG.partColors[partName] == nil then
+        return true
+    end
+
+    return getTracerThickness(partName) >= CONFIG.trackerMinRecognizedThickness
+end
+
 function addTrackerWhitelist(oreName)
     oreName = trim(oreName)
     if oreName == "" or isTrackerWhitelisted(oreName) then
@@ -80,8 +96,10 @@ function setTrackerState(enabled)
     if trackerEnabled then
         trackerToggleBtn.Text = "Tracker ESP ON"
         trackerToggleBtn.BackgroundColor3 = THEME.success
-        if #CONFIG.trackerWhitelist == 0 then
+        if #CONFIG.trackerWhitelist == 0 and not CONFIG.trackerTraceUnlisted then
             setStatus(trackerStatus, "Tracker enabled. Add ores with the gear first.", THEME.muted)
+        elseif CONFIG.trackerTraceUnlisted then
+            setStatus(trackerStatus, "Tracker enabled. Auto-tracing unlisted/thick MTS ores.", THEME.white)
         else
             setStatus(trackerStatus, "Tracker enabled for " .. tostring(#CONFIG.trackerWhitelist) .. " whitelisted ores.", THEME.white)
         end
@@ -106,7 +124,7 @@ function updateTrackerEntry(entry, playerPos)
     local toPos = part.Position + CONFIG.lineOffset
     local direction = toPos - fromPos
     local distance = direction.Magnitude
-    local shouldShow = isTrackerWhitelisted(part.Name) and (CONFIG.radius == 0 or distance <= CONFIG.radius)
+    local shouldShow = trackerShouldTrace(part.Name) and (CONFIG.radius == 0 or distance <= CONFIG.radius)
     if not shouldShow or distance <= 0.05 then
         if entry.visible then
             setEntryVisible(entry, false)
@@ -172,7 +190,7 @@ function updateTrackerEsp()
     for index = #trackerActiveEntries, 1, -1 do
         local entry = trackerActiveEntries[index]
         local part = entry.part
-        if not part or not part.Parent or not isTrackerWhitelisted(part.Name) then
+        if not part or not part.Parent or not trackerShouldTrace(part.Name) then
             setEntryVisible(entry, false)
             table.remove(trackerActiveEntries, index)
         else
@@ -192,7 +210,7 @@ function rebuildTrackerTargets()
         return
     end
 
-    if #CONFIG.trackerWhitelist == 0 then
+    if #CONFIG.trackerWhitelist == 0 and not CONFIG.trackerTraceUnlisted then
         hideTrackerEntries()
         return
     end
@@ -216,7 +234,7 @@ function rebuildTrackerTargets()
     local candidates = {}
 
     for part, _ in pairs(trackedParts) do
-        if part and part.Parent and isTrackerWhitelisted(part.Name) then
+        if part and part.Parent and trackerShouldTrace(part.Name) then
             local distance = (part.Position - playerPos).Magnitude
             if CONFIG.radius == 0 or distance <= CONFIG.radius then
                 local existing = nearestByName[part.Name]

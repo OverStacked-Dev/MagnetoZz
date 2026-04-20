@@ -50,6 +50,8 @@ CONFIG = {
     },
     partThickness = {},
     trackerWhitelist = {},
+    trackerTraceUnlisted = false,
+    trackerMinRecognizedThickness = 5,
 }
 
 GUI_SETTINGS = {

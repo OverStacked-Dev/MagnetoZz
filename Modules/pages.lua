@@ -57,9 +57,10 @@ applyBtn = makeActionButton(configTop, "Apply", 392, 54, 92, THEME.accent)
 applyStatus = makeStatusLabel(configTop, 18, 78, 360)
 
 partColorSection = makeSection(configPage, "Manual Tracer Settings", 112, 270)
+mtsSearchInput = makeInput(partColorSection, "Search tracer", 354, 8, 176)
 partColorList = Instance.new("ScrollingFrame")
-partColorList.Size = UDim2.new(1, -24, 0, 168)
-partColorList.Position = UDim2.new(0, 12, 0, 42)
+partColorList.Size = UDim2.new(1, -24, 0, 160)
+partColorList.Position = UDim2.new(0, 12, 0, 50)
 partColorList.BackgroundColor3 = THEME.panelAlt
 partColorList.BorderSizePixel = 0
 partColorList.ScrollBarThickness = 4
@@ -71,11 +72,11 @@ partColorLayout = Instance.new("UIListLayout")
 partColorLayout.Padding = UDim.new(0, 6)
 partColorLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 partColorLayout.Parent = partColorList
-addNameInput = makeInput(partColorSection, "Ore Name", 51, 218, 145)
-addColorInput = makeInput(partColorSection, "Color", 206, 218, 90)
-addThicknessInput = makeInput(partColorSection, "Thickness", 306, 218, 92)
+addNameInput = makeInput(partColorSection, "Ore Name", 51, 222, 145)
+addColorInput = makeInput(partColorSection, "Color", 206, 222, 90)
+addThicknessInput = makeInput(partColorSection, "Thickness", 306, 222, 92)
 addThicknessInput.Text = tostring(CONFIG.screenLineThickness)
-addColorBtn = makeActionButton(partColorSection, "Add Tracer", 410, 218, 110, THEME.success)
+addColorBtn = makeActionButton(partColorSection, "Add Tracer", 410, 222, 110, THEME.success)
 partColorStatus = makeStatusLabel(partColorSection, 51, 252, 430)
 
 blacklistSection = makeSection(blacklistPage, "Ignored Ores", 0, 320)
@@ -96,7 +97,7 @@ blacklistInput = makeInput(blacklistSection, "Ore to ignore", 127, 246, 220)
 addBlacklistBtn = makeActionButton(blacklistSection, "Add", 357, 246, 86, THEME.success)
 blacklistStatus = makeStatusLabel(blacklistSection, 12, 286, 360)
 
-guiMainSection = makeSection(guiPage, "Gui Settings", 0, 190)
+guiMainSection = makeSection(guiPage, "Gui Settings", 0, 232)
 makeLabel(guiMainSection, "GUI Accent", 12, 42, 100)
 guiAccentInput = makeInput(guiMainSection, "4864FF", 12, 62, 110)
 guiAccentInput.Text = colorToHex(GUI_SETTINGS.accentColor)
@@ -116,11 +117,11 @@ guiEspKeybindInput.Text = GUI_SETTINGS.espToggleKey.Name
 makeLabel(guiMainSection, "Tracker Key", 308, 102, 110)
 guiTrackerKeybindInput = makeInput(guiMainSection, "RightAlt", 308, 122, 116)
 guiTrackerKeybindInput.Text = GUI_SETTINGS.trackerToggleKey.Name
-guiApplyBtn = makeActionButton(guiMainSection, "Apply GUI", 438, 122, 104, THEME.accent)
-guiResetBtn = makeActionButton(guiMainSection, "Reset GUI", 438, 82, 104, THEME.panelAlt)
-guiStatus = makeStatusLabel(guiMainSection, 12, 166, 470)
+guiApplyBtn = makeActionButton(guiMainSection, "Apply GUI", 12, 172, 128, THEME.accent)
+guiResetBtn = makeActionButton(guiMainSection, "Reset GUI", 152, 172, 118, THEME.panelAlt)
+guiStatus = makeStatusLabel(guiMainSection, 292, 180, 250)
 
-guiExtraSection = makeSection(guiPage, "What Changes", 206, 96)
+guiExtraSection = makeSection(guiPage, "What Changes", 248, 96)
 guiInfo = makeStatusLabel(guiExtraSection, 12, 36, 480)
 guiInfo.Size = UDim2.new(1, -24, 0, 40)
 guiInfo.TextWrapped = true
@@ -224,7 +225,7 @@ tracerEditStatus = makeStatusLabel(tracerEditPrompt, 18, 200, 300)
 tracerEditStatus.ZIndex = 21
 
 trackerConfigPrompt = Instance.new("Frame")
-trackerConfigPrompt.Size = UDim2.new(0, 340, 0, 270)
+trackerConfigPrompt.Size = UDim2.new(0, 380, 0, 342)
 trackerConfigPrompt.AnchorPoint = Vector2.new(0.5, 0.5)
 trackerConfigPrompt.Position = UDim2.new(0.5, 0, 0.5, 0)
 trackerConfigPrompt.BackgroundColor3 = THEME.panel
@@ -246,16 +247,26 @@ trackerConfigTitle.TextSize = 18
 trackerConfigTitle.Font = Enum.Font.GothamBold
 trackerConfigTitle.ZIndex = 21
 
-trackerConfigHint = makeStatusLabel(trackerConfigPrompt, 18, 42, 300)
+trackerConfigHint = makeStatusLabel(trackerConfigPrompt, 18, 42, 340)
 trackerConfigHint.Size = UDim2.new(1, -36, 0, 34)
 trackerConfigHint.TextWrapped = true
 trackerConfigHint.Text = "Add ore names here. Tracker ESP renders only the closest match for each whitelisted ore."
 trackerConfigHint.TextColor3 = THEME.white
 trackerConfigHint.ZIndex = 21
 
+trackerAutoTraceBtn = makeActionButton(trackerConfigPrompt, "[ ] Trace un-added ores to MTS", 18, 84, 236, THEME.panelAlt)
+trackerAutoTraceBtn.ZIndex = 21
+trackerAutoTraceLabel = makeLabel(trackerConfigPrompt, "Minimum Recognized Thickness", 18, 124, 190)
+trackerAutoTraceLabel.ZIndex = 21
+trackerMinThicknessInput = makeInput(trackerConfigPrompt, "5", 214, 120, 72)
+trackerMinThicknessInput.Text = tostring(CONFIG.trackerMinRecognizedThickness)
+trackerMinThicknessInput.ZIndex = 21
+trackerMinThicknessApplyBtn = makeActionButton(trackerConfigPrompt, "Apply", 296, 120, 64, THEME.accent)
+trackerMinThicknessApplyBtn.ZIndex = 21
+
 trackerWhitelistList = Instance.new("ScrollingFrame")
-trackerWhitelistList.Size = UDim2.new(1, -36, 0, 108)
-trackerWhitelistList.Position = UDim2.new(0, 18, 0, 84)
+trackerWhitelistList.Size = UDim2.new(1, -36, 0, 94)
+trackerWhitelistList.Position = UDim2.new(0, 18, 0, 164)
 trackerWhitelistList.BackgroundColor3 = THEME.panelAlt
 trackerWhitelistList.BorderSizePixel = 0
 trackerWhitelistList.ScrollBarThickness = 4
@@ -269,13 +280,13 @@ trackerWhitelistLayout.Padding = UDim.new(0, 6)
 trackerWhitelistLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
 trackerWhitelistLayout.Parent = trackerWhitelistList
 
-trackerWhitelistInput = makeInput(trackerConfigPrompt, "Ore to track", 18, 204, 176)
+trackerWhitelistInput = makeInput(trackerConfigPrompt, "Ore to track", 18, 270, 208)
 trackerWhitelistInput.ZIndex = 21
-trackerWhitelistAddBtn = makeActionButton(trackerConfigPrompt, "Add", 204, 204, 62, THEME.success)
+trackerWhitelistAddBtn = makeActionButton(trackerConfigPrompt, "Add", 236, 270, 56, THEME.success)
 trackerWhitelistAddBtn.ZIndex = 21
-trackerWhitelistCloseBtn = makeActionButton(trackerConfigPrompt, "Close", 276, 204, 50, THEME.panelAlt)
+trackerWhitelistCloseBtn = makeActionButton(trackerConfigPrompt, "Close", 302, 270, 58, THEME.panelAlt)
 trackerWhitelistCloseBtn.ZIndex = 21
-trackerWhitelistStatus = makeStatusLabel(trackerConfigPrompt, 18, 238, 300)
+trackerWhitelistStatus = makeStatusLabel(trackerConfigPrompt, 18, 306, 340)
 trackerWhitelistStatus.ZIndex = 21
 
 partColorRows = {}
@@ -301,6 +312,9 @@ function refreshUiInputs()
     guiTrackerKeybindInput.Text = GUI_SETTINGS.trackerToggleKey.Name
     guiAnimationToggle.Text = GUI_SETTINGS.animationsEnabled and "Animations: ON" or "Animations: OFF"
     guiAnimationToggle.BackgroundColor3 = GUI_SETTINGS.animationsEnabled and THEME.success or THEME.danger
+    trackerAutoTraceBtn.Text = CONFIG.trackerTraceUnlisted and "[x] Trace un-added ores to MTS" or "[ ] Trace un-added ores to MTS"
+    trackerAutoTraceBtn.BackgroundColor3 = CONFIG.trackerTraceUnlisted and THEME.success or THEME.panelAlt
+    trackerMinThicknessInput.Text = tostring(CONFIG.trackerMinRecognizedThickness)
 end
 
 function applyGuiSettings()
