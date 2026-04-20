@@ -1,4 +1,5 @@
 local BASE_URL = "https://raw.githubusercontent.com/OverStacked-Dev/MagnetoZz/main/"
+local StarterGui = game:GetService("StarterGui")
 
 local MODULES = {
     "Modules/bootstrap.lua",
@@ -10,6 +11,18 @@ local MODULES = {
 }
 
 print("MagnetoZz EXEC debug: main started")
+
+local function notify(text)
+    print("MagnetoZz Loader: " .. text)
+
+    pcall(function()
+        StarterGui:SetCore("SendNotification", {
+            Title = "MagnetoZz",
+            Text = text,
+            Duration = 3,
+        })
+    end)
+end
 
 local rootEnv = (getgenv and getgenv()) or (getfenv and getfenv()) or _G or {}
 
@@ -100,4 +113,5 @@ for _, path in ipairs(MODULES) do
     runModule(path)
 end
 
+notify("Finished")
 print("MagnetoZz EXEC debug: ready")
