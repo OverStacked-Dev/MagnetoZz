@@ -9,12 +9,12 @@ local playerGui = player:WaitForChild("PlayerGui")
 local chunksFolder = workspace:WaitForChild("Chunks")
 
 local MODULES = {
-    "modules/bootstrap.lua",
-    "modules/shell.lua",
-    "modules/pages.lua",
-    "modules/data.lua",
-    "modules/esp.lua",
-    "modules/events.lua",
+    "Modules/bootstrap.lua",
+    "Modules/shell.lua",
+    "Modules/pages.lua",
+    "Modules/data.lua",
+    "Modules/esp.lua",
+    "Modules/events.lua",
 }
 
 local THEME = {
