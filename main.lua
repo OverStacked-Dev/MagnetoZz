@@ -6,6 +6,7 @@ local MODULES = {
     "Modules/pages.lua",
     "Modules/data.lua",
     "Modules/esp.lua",
+    "Modules/tracker.lua",
     "Modules/events.lua",
 }
 
