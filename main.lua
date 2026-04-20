@@ -9,7 +9,9 @@ local MODULES = {
     "Modules/events.lua",
 }
 
-local rootEnv = getfenv and getfenv() or _G or {}
+print("MagnetoZz EXEC debug: main started")
+
+local rootEnv = (getgenv and getgenv()) or (getfenv and getfenv()) or _G or {}
 
 local env = setmetatable({
     game = game,
@@ -34,6 +36,7 @@ local env = setmetatable({
     pairs = pairs,
     ipairs = ipairs,
     pcall = pcall,
+    xpcall = xpcall,
     table = table,
     string = string,
     math = math,
@@ -54,21 +57,47 @@ local env = setmetatable({
 
 env._G = env
 
+local function fetchModule(path)
+    local url = BASE_URL .. path
+    print("MagnetoZz EXEC debug: fetching " .. path)
+
+    local okFetch, source = pcall(function()
+        return game:HttpGet(url)
+    end)
+
+    if not okFetch or type(source) ~= "string" then
+        error("MagnetoZz failed to fetch " .. path .. " from " .. url .. ": " .. tostring(source))
+    end
+
+    if source:find("^404") or source:find("Not Found", 1, true) then
+        error("MagnetoZz got 404 for " .. path .. ". Check GitHub path/case: " .. url)
+    end
+
+    return source
+end
+
 local function runModule(path)
-    local source = game:HttpGet(BASE_URL .. path)
-    local fn, err = loadstring(source)
+    local source = fetchModule(path)
+    local fn, compileErr = loadstring(source)
 
     if not fn then
-        error("MagnetoZz compile failed in " .. path .. ": " .. tostring(err))
+        error("MagnetoZz compile failed in " .. path .. ": " .. tostring(compileErr))
     end
 
     if setfenv then
         setfenv(fn, env)
     end
 
-    return fn()
+    print("MagnetoZz EXEC debug: running " .. path)
+
+    local okRun, runErr = pcall(fn)
+    if not okRun then
+        error("MagnetoZz runtime failed in " .. path .. ": " .. tostring(runErr))
+    end
 end
 
 for _, path in ipairs(MODULES) do
     runModule(path)
 end
+
+print("MagnetoZz EXEC debug: ready")
